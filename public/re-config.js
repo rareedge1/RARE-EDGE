@@ -45,12 +45,16 @@ function isPremiumUser() {
 
 // ── STRIPE CHECKOUT ──────────────────────────────────────────
 async function startCheckout(plan = "monthly") {
-  const r = await fetch("/api/checkout", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ plan })
-  });
-  const data = await r.json();
-  if (data.url) window.location.href = data.url;
-  else throw new Error("Checkout failed");
+  try {
+    const r = await fetch("/api/checkout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ plan })
+    });
+    const data = await r.json();
+    if (data.url) window.location.href = data.url;
+    else alert("Checkout error: " + (data.error || "Unknown error"));
+  } catch(e) {
+    alert("Checkout failed: " + e.message);
+  }
 }
