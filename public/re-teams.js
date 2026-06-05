@@ -1,0 +1,196 @@
+// ── RARE EDGE — TEAM DATA ────────────────────────────────────
+
+// NFL Teams — offensive/defensive ratings, pace
+const NFL = {
+  "Cardinals":   { off:22.1, def:24.8, pace:65, homeSOS:0.48 },
+  "Falcons":     { off:24.3, def:23.1, pace:67, homeSOS:0.50 },
+  "Ravens":      { off:28.9, def:19.2, pace:63, homeSOS:0.54 },
+  "Bills":       { off:29.4, def:20.1, pace:66, homeSOS:0.55 },
+  "Panthers":    { off:17.2, def:26.4, pace:64, homeSOS:0.44 },
+  "Bears":       { off:18.9, def:22.3, pace:65, homeSOS:0.47 },
+  "Bengals":     { off:27.1, def:22.8, pace:68, homeSOS:0.52 },
+  "Browns":      { off:20.4, def:21.6, pace:62, homeSOS:0.49 },
+  "Cowboys":     { off:26.8, def:21.4, pace:67, homeSOS:0.53 },
+  "Broncos":     { off:19.3, def:22.7, pace:65, homeSOS:0.48 },
+  "Lions":       { off:30.1, def:22.9, pace:69, homeSOS:0.55 },
+  "Packers":     { off:24.7, def:21.3, pace:66, homeSOS:0.51 },
+  "Texans":      { off:25.9, def:23.4, pace:67, homeSOS:0.51 },
+  "Colts":       { off:21.6, def:23.8, pace:64, homeSOS:0.49 },
+  "Jaguars":     { off:22.4, def:24.1, pace:66, homeSOS:0.48 },
+  "Chiefs":      { off:29.7, def:19.8, pace:65, homeSOS:0.57 },
+  "Raiders":     { off:20.1, def:25.3, pace:64, homeSOS:0.47 },
+  "Chargers":    { off:24.8, def:21.9, pace:67, homeSOS:0.51 },
+  "Rams":        { off:24.3, def:22.6, pace:67, homeSOS:0.51 },
+  "Dolphins":    { off:27.4, def:23.7, pace:70, homeSOS:0.52 },
+  "Vikings":     { off:26.1, def:22.4, pace:67, homeSOS:0.52 },
+  "Patriots":    { off:16.8, def:24.6, pace:63, homeSOS:0.46 },
+  "Saints":      { off:22.6, def:22.1, pace:64, homeSOS:0.50 },
+  "Giants":      { off:17.4, def:25.8, pace:63, homeSOS:0.46 },
+  "Jets":        { off:20.8, def:21.7, pace:64, homeSOS:0.49 },
+  "Eagles":      { off:27.9, def:20.6, pace:68, homeSOS:0.54 },
+  "Steelers":    { off:20.2, def:22.3, pace:64, homeSOS:0.49 },
+  "49ers":       { off:28.4, def:19.9, pace:66, homeSOS:0.55 },
+  "Seahawks":    { off:23.7, def:23.2, pace:67, homeSOS:0.50 },
+  "Buccaneers":  { off:23.9, def:22.4, pace:67, homeSOS:0.51 },
+  "Titans":      { off:19.7, def:23.9, pace:63, homeSOS:0.47 },
+  "Commanders":  { off:23.4, def:22.8, pace:66, homeSOS:0.50 },
+};
+
+// NBA Teams
+const NBA = {
+  "Hawks":         { ortg:113.2, drtg:116.8, pace:101.2 },
+  "Celtics":       { ortg:122.1, drtg:110.4, pace:99.8  },
+  "Nets":          { ortg:110.4, drtg:116.2, pace:98.4  },
+  "Hornets":       { ortg:109.8, drtg:117.4, pace:100.1 },
+  "Bulls":         { ortg:112.6, drtg:114.8, pace:99.3  },
+  "Cavaliers":     { ortg:116.4, drtg:111.2, pace:97.8  },
+  "Mavericks":     { ortg:118.7, drtg:112.6, pace:98.9  },
+  "Nuggets":       { ortg:117.9, drtg:111.8, pace:96.4  },
+  "Pistons":       { ortg:108.2, drtg:118.6, pace:100.4 },
+  "Warriors":      { ortg:116.8, drtg:113.2, pace:100.7 },
+  "Rockets":       { ortg:113.4, drtg:112.8, pace:101.8 },
+  "Pacers":        { ortg:118.2, drtg:115.6, pace:104.2 },
+  "Clippers":      { ortg:114.6, drtg:112.4, pace:97.6  },
+  "Lakers":        { ortg:114.8, drtg:113.6, pace:98.2  },
+  "Grizzlies":     { ortg:114.2, drtg:113.8, pace:100.6 },
+  "Heat":          { ortg:111.8, drtg:112.6, pace:96.8  },
+  "Bucks":         { ortg:117.4, drtg:112.8, pace:100.2 },
+  "Timberwolves":  { ortg:116.2, drtg:109.8, pace:98.4  },
+  "Pelicans":      { ortg:112.4, drtg:113.2, pace:98.8  },
+  "Knicks":        { ortg:115.6, drtg:111.4, pace:97.2  },
+  "Thunder":       { ortg:119.2, drtg:108.6, pace:100.8 },
+  "Magic":         { ortg:111.6, drtg:110.8, pace:97.4  },
+  "76ers":         { ortg:116.8, drtg:113.4, pace:98.6  },
+  "Suns":          { ortg:115.4, drtg:114.2, pace:99.4  },
+  "Trail Blazers": { ortg:108.6, drtg:118.4, pace:101.4 },
+  "Kings":         { ortg:117.2, drtg:114.8, pace:102.4 },
+  "Spurs":         { ortg:108.4, drtg:119.2, pace:100.6 },
+  "Raptors":       { ortg:111.4, drtg:114.6, pace:98.2  },
+  "Jazz":          { ortg:111.8, drtg:116.4, pace:99.8  },
+  "Wizards":       { ortg:107.6, drtg:120.4, pace:99.6  },
+};
+
+// MLB Teams
+const MLB = {
+  "Angels":      { runs:4.12, era:4.68, whip:1.31, park:1.02 },
+  "Astros":      { runs:4.58, era:3.89, whip:1.22, park:0.98 },
+  "Athletics":   { runs:3.84, era:4.92, whip:1.38, park:0.97 },
+  "Blue Jays":   { runs:4.42, era:4.21, whip:1.26, park:1.01 },
+  "Braves":      { runs:4.96, era:3.74, whip:1.19, park:1.03 },
+  "Brewers":     { runs:4.28, era:3.98, whip:1.24, park:0.96 },
+  "Cardinals":   { runs:4.14, era:4.12, whip:1.27, park:0.98 },
+  "Cubs":        { runs:4.38, era:4.08, whip:1.25, park:1.12 },
+  "Diamondbacks":{ runs:4.62, era:3.92, whip:1.23, park:1.01 },
+  "Dodgers":     { runs:5.12, era:3.48, whip:1.16, park:0.95 },
+  "Giants":      { runs:4.08, era:4.18, whip:1.28, park:0.92 },
+  "Guardians":   { runs:4.24, era:3.86, whip:1.21, park:0.97 },
+  "Mariners":    { runs:4.18, era:3.78, whip:1.20, park:0.89 },
+  "Marlins":     { runs:3.92, era:4.32, whip:1.29, park:0.91 },
+  "Mets":        { runs:4.44, era:4.02, whip:1.24, park:1.01 },
+  "Nationals":   { runs:3.88, era:4.78, whip:1.34, park:1.04 },
+  "Orioles":     { runs:4.72, era:3.94, whip:1.23, park:1.02 },
+  "Padres":      { runs:4.48, era:3.84, whip:1.21, park:0.94 },
+  "Phillies":    { runs:4.82, era:3.72, whip:1.18, park:1.06 },
+  "Pirates":     { runs:3.96, era:4.48, whip:1.30, park:0.99 },
+  "Rangers":     { runs:4.64, era:4.04, whip:1.25, park:1.05 },
+  "Rays":        { runs:4.34, era:3.68, whip:1.18, park:0.96 },
+  "Red Sox":     { runs:4.52, era:4.28, whip:1.27, park:1.08 },
+  "Reds":        { runs:4.36, era:4.42, whip:1.29, park:1.07 },
+  "Rockies":     { runs:4.48, era:5.12, whip:1.42, park:1.24 },
+  "Royals":      { runs:4.22, era:4.18, whip:1.26, park:1.00 },
+  "Tigers":      { runs:4.08, era:4.08, whip:1.25, park:0.98 },
+  "Twins":       { runs:4.46, era:4.02, whip:1.24, park:0.99 },
+  "White Sox":   { runs:3.78, era:5.24, whip:1.44, park:1.01 },
+  "Yankees":     { runs:4.88, era:3.82, whip:1.20, park:1.04 },
+};
+
+// NHL Teams
+const NHL = {
+  "Ducks":         { gf:2.74, ga:3.28, pp:17.2, pk:77.4, cf:48.2 },
+  "Bruins":        { gf:3.18, ga:2.72, pp:22.4, pk:81.6, cf:52.8 },
+  "Sabres":        { gf:2.88, ga:3.12, pp:18.6, pk:78.8, cf:49.4 },
+  "Flames":        { gf:2.96, ga:2.98, pp:19.4, pk:80.2, cf:50.6 },
+  "Hurricanes":    { gf:3.24, ga:2.68, pp:23.2, pk:82.4, cf:53.4 },
+  "Blackhawks":    { gf:2.62, ga:3.42, pp:16.8, pk:76.6, cf:46.8 },
+  "Avalanche":     { gf:3.48, ga:2.84, pp:24.6, pk:81.2, cf:54.2 },
+  "Blue Jackets":  { gf:2.72, ga:3.34, pp:17.4, pk:77.8, cf:47.6 },
+  "Stars":         { gf:3.28, ga:2.74, pp:22.8, pk:82.0, cf:52.4 },
+  "Red Wings":     { gf:2.84, ga:3.08, pp:18.8, pk:79.4, cf:49.8 },
+  "Oilers":        { gf:3.52, ga:3.02, pp:26.4, pk:78.8, cf:51.8 },
+  "Panthers":      { gf:3.38, ga:2.72, pp:23.8, pk:82.6, cf:53.8 },
+  "Kings":         { gf:3.04, ga:2.78, pp:20.6, pk:81.8, cf:51.4 },
+  "Wild":          { gf:3.12, ga:2.84, pp:21.2, pk:80.8, cf:51.8 },
+  "Canadiens":     { gf:2.78, ga:3.18, pp:18.2, pk:78.2, cf:48.6 },
+  "Predators":     { gf:2.82, ga:3.04, pp:18.4, pk:79.6, cf:49.2 },
+  "Devils":        { gf:3.08, ga:2.88, pp:20.8, pk:80.4, cf:51.2 },
+  "Islanders":     { gf:2.86, ga:2.92, pp:19.2, pk:80.6, cf:50.4 },
+  "Rangers":       { gf:3.22, ga:2.76, pp:22.6, pk:82.2, cf:52.6 },
+  "Senators":      { gf:2.92, ga:3.06, pp:19.6, pk:79.8, cf:50.2 },
+  "Flyers":        { gf:2.68, ga:3.24, pp:17.6, pk:78.4, cf:48.4 },
+  "Penguins":      { gf:2.98, ga:2.96, pp:20.2, pk:80.0, cf:50.8 },
+  "Sharks":        { gf:2.58, ga:3.48, pp:16.4, pk:76.2, cf:46.4 },
+  "Blues":         { gf:2.94, ga:3.02, pp:19.8, pk:80.2, cf:50.6 },
+  "Lightning":     { gf:3.32, ga:2.78, pp:23.4, pk:81.8, cf:53.2 },
+  "Maple Leafs":   { gf:3.28, ga:2.86, pp:22.4, pk:80.6, cf:52.2 },
+  "Coyotes":       { gf:2.64, ga:3.38, pp:17.0, pk:77.2, cf:47.2 },
+  "Canucks":       { gf:3.14, ga:2.88, pp:21.4, pk:81.0, cf:52.0 },
+  "Golden Knights":{ gf:3.36, ga:2.76, pp:23.6, pk:82.4, cf:53.6 },
+  "Capitals":      { gf:3.06, ga:2.94, pp:20.4, pk:80.4, cf:51.0 },
+  "Jets":          { gf:3.18, ga:2.82, pp:21.8, pk:81.4, cf:52.4 },
+  "Kraken":        { gf:2.96, ga:2.98, pp:20.0, pk:80.6, cf:51.2 },
+};
+
+// WNBA Teams
+const WNBA = {
+  "Dream":      { ortg:104.2, drtg:108.6, pace:84.2 },
+  "Aces":       { ortg:112.4, drtg:102.8, pace:86.4 },
+  "Sky":        { ortg:102.8, drtg:109.4, pace:83.6 },
+  "Sun":        { ortg:108.6, drtg:103.4, pace:82.8 },
+  "Wings":      { ortg:103.4, drtg:107.8, pace:84.8 },
+  "Valkyries":  { ortg:105.8, drtg:107.2, pace:85.2 },
+  "Fever":      { ortg:106.2, drtg:108.4, pace:85.6 },
+  "Sparks":     { ortg:102.4, drtg:109.8, pace:83.4 },
+  "Lynx":       { ortg:107.4, drtg:104.6, pace:83.8 },
+  "Liberty":    { ortg:111.2, drtg:103.2, pace:85.4 },
+  "Mercury":    { ortg:104.8, drtg:106.4, pace:84.4 },
+  "Storm":      { ortg:106.8, drtg:105.8, pace:84.6 },
+  "Mystics":    { ortg:103.2, drtg:108.2, pace:83.2 },
+};
+
+// UFL Teams
+const UFL = {
+  "Arlington Renegades":    { off:22.4, def:21.8, pace:63 },
+  "Birmingham Stallions":   { off:24.6, def:20.4, pace:64 },
+  "DC Defenders":           { off:21.2, def:22.6, pace:62 },
+  "Houston Roughnecks":     { off:23.8, def:21.2, pace:64 },
+  "Memphis Showboats":      { off:20.8, def:23.4, pace:62 },
+  "Michigan Panthers":      { off:22.6, def:21.6, pace:63 },
+  "San Antonio Brahmas":    { off:21.4, def:22.8, pace:62 },
+  "St. Louis Battlehawks":  { off:25.2, def:20.2, pace:65 },
+};
+
+// Soccer leagues
+const SOCCER_LEAGUES = [
+  { id:"soccer_epl",          name:"EPL",        emoji:"🏴󠁧󠁢󠁥󠁮󠁧󠁿" },
+  { id:"soccer_usa_mls",      name:"MLS",        emoji:"🇺🇸" },
+  { id:"soccer_uefa_champs_league", name:"UEFA CL", emoji:"⭐" },
+  { id:"soccer_spain_la_liga",name:"La Liga",    emoji:"🇪🇸" },
+  { id:"soccer_germany_bundesliga", name:"Bundesliga", emoji:"🇩🇪" },
+  { id:"soccer_italy_serie_a",name:"Serie A",    emoji:"🇮🇹" },
+  { id:"soccer_france_ligue_one", name:"Ligue 1", emoji:"🇫🇷" },
+  { id:"soccer_nwsl",         name:"NWSL",       emoji:"⚽" },
+];
+
+// Surface factor for tennis
+const SURFACE = {
+  clay:  { baseline:1.0, serve:0.85 },
+  grass: { baseline:0.95, serve:1.15 },
+  hard:  { baseline:1.0, serve:1.0  },
+};
+
+// NCAA SOS (strength of schedule) by conference
+const CONF_SOS = {
+  "SEC":3.2,"Big Ten":2.8,"Big 12":2.4,"ACC":2.2,
+  "Pac-12":2.0,"AAC":1.4,"MWC":1.2,"Sun Belt":0.8,
+  "CUSA":0.6,"MAC":0.4
+};
