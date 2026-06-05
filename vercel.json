@@ -1,21 +1,20 @@
 {
   "version": 2,
-  "routes": [
-    { "src": "/re-config.js", "dest": "/public/re-config.js" },
-    { "src": "/re-teams.js", "dest": "/public/re-teams.js" },
-    { "src": "/re-players.js", "dest": "/public/re-players.js" },
-    { "src": "/re-models.js", "dest": "/public/re-models.js" },
-    { "src": "/re-api.js", "dest": "/public/re-api.js" },
-    { "src": "/re-ui.js", "dest": "/public/re-ui.js" },
-    { "src": "/re-sport-nfl.js", "dest": "/public/re-sport-nfl.js" },
-    { "src": "/re-sport-nba.js", "dest": "/public/re-sport-nba.js" },
-    { "src": "/re-sport-mlb.js", "dest": "/public/re-sport-mlb.js" },
-    { "src": "/re-sport-nhl.js", "dest": "/public/re-sport-nhl.js" },
-    { "src": "/re-sport-soccer.js", "dest": "/public/re-sport-soccer.js" },
-    { "src": "/re-sport-other.js", "dest": "/public/re-sport-other.js" },
-    { "src": "/re-dashboard.js", "dest": "/public/re-dashboard.js" },
-    { "src": "/re-app.js", "dest": "/public/re-app.js" },
-    { "src": "/api/(.*)", "dest": "/api/$1" },
-    { "src": "/(.*)", "dest": "/public/app.html" }
+  "rewrites": [
+    { "source": "/re-config.js", "destination": "/public/re-config.js" },
+    { "source": "/re-teams.js", "destination": "/public/re-teams.js" },
+    { "source": "/re-players.js", "destination": "/public/re-players.js" },
+    { "source": "/re-models.js", "destination": "/public/re-models.js" },
+    { "source": "/re-api.js", "destination": "/public/re-api.js" },
+    { "source": "/re-ui.js", "destination": "/public/re-ui.js" },
+    { "source": "/re-sport-nfl.js", "destination": "/public/re-sport-nfl.js" },
+    { "source": "/re-sport-nba.js", "destination": "/public/re-sport-nba.js" },
+    { "source": "/re-sport-mlb.js", "destination": "/public/re-sport-mlb.js" },
+    { "source": "/re-sport-nhl.js", "destination": "/public/re-sport-nhl.js" },
+    { "source": "/re-sport-soccer.js", "destination": "/public/re-sport-soccer.js" },
+    { "source": "/re-sport-other.js", "destination": "/public/re-sport-other.js" },
+    { "source": "/re-dashboard.js", "destination": "/public/re-dashboard.js" },
+    { "source": "/re-app.js", "destination": "/public/re-app.js" },
+    { "source": "/(.*)", "destination": "/public/app.html" }
   ]
 }
