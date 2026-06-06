@@ -2,6 +2,9 @@
   "version": 2,
   "outputDirectory": "public",
   "rewrites": [
+    { "source": "/api/odds", "destination": "/api/odds.js" },
+    { "source": "/api/checkout", "destination": "/api/checkout.js" },
+    { "source": "/api/scores", "destination": "/api/scores.js" },
     { "source": "/re-config.js", "destination": "/re-config.js" },
     { "source": "/re-teams.js", "destination": "/re-teams.js" },
     { "source": "/re-players.js", "destination": "/re-players.js" },
