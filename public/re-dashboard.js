@@ -96,7 +96,7 @@ const DASH_SPORTS = [
 
 function DashboardTab({ isPremium }) {
   const today = new Date();
-  const dates = Array.from({ length:4 }, (_, i) => { const d = new Date(today); d.setDate(d.getDate() + i); return d; });
+  const dates = Array.from({ length:6 }, (_, i) => { const d = new Date(today); d.setDate(d.getDate() + (i - 2)); return d; });
   const [selectedDate, setSelectedDate] = useState(today);
   const [allGames, setAllGames] = useState([]);
   const [scores, setScores] = useState({});
