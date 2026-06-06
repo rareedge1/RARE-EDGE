@@ -7,7 +7,7 @@ export default async function handler(req, res) {
   if (!sport) return res.status(400).json({ error: "Sport required" });
 
   const KEY = process.env.ODDS_API_KEY || "99a28e26d9ca8efe2551318548dabc7d";
-  const url = `https://api.the-odds-api.com/v4/sports/${sport}/scores?apiKey=${KEY}&daysFrom=1`;
+  const url = `https://api.the-odds-api.com/v4/sports/${sport}/scores?apiKey=${KEY}&daysFrom=3`;
 
   try {
     const r = await fetch(url);
