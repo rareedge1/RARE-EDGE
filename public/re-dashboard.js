@@ -1,6 +1,17 @@
 // ── DASHBOARD GAME CARD ──────────────────────────────────────
-function DashboardCard({ game, isPremium, index }) {
+function DashboardCard({ game, isPremium, index, scoreData }) {
   const [open, setOpen] = useState(false);
+
+  // Get live/final score for this game — match by team names
+  const score = scoreData?.find(s =>
+    (s.home_team === game.home && s.away_team === game.away) ||
+    (s.home_team === game.away && s.away_team === game.home) ||
+    s.id === game.id
+  );
+  const isLive = score?.completed === false && score?.scores?.length > 0;
+  const isFinal = score?.completed === true;
+  const homeScore = score?.scores?.find(s => s.name === game.home)?.score;
+  const awayScore = score?.scores?.find(s => s.name === game.away)?.score;
 
   // Auto-project based on sport
   const proj = useMemo(() => {
@@ -44,11 +55,13 @@ function DashboardCard({ game, isPremium, index }) {
       <div style={{ padding:"12px 14px" }}>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:"8px" }}>
           <div style={{ fontSize:"9px", color:"#444" }}>{game.sportLabel} · {game.time}</div>
+          {isLive && <div style={{ fontSize:"9px", color:"#c8f54a", fontWeight:"700", letterSpacing:"1px", background:"rgba(200,245,74,0.12)", padding:"2px 6px", borderRadius:"4px" }}>● LIVE</div>}
+          {isFinal && <div style={{ fontSize:"9px", color:"#555", fontWeight:"700", letterSpacing:"1px" }}>FINAL</div>}
         </div>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
           <div style={{ flex:1 }}>
-            <div style={{ fontSize:"12px", color:"#666", marginBottom:"3px" }}>{game.away}</div>
-            <div style={{ fontSize:"14px", color:"#ccc", fontWeight:"600" }}>{game.home}</div>
+            <div style={{ fontSize:"12px", color:"#666", marginBottom:"3px" }}>{game.away} {isFinal || isLive ? <span style={{ fontFamily:"'Bebas Neue',cursive", fontSize:"16px", color: isFinal ? "#aaa" : "#c8f54a" }}>{awayScore}</span> : ""}</div>
+            <div style={{ fontSize:"14px", color:"#ccc", fontWeight:"600" }}>{game.home} {isFinal || isLive ? <span style={{ fontFamily:"'Bebas Neue',cursive", fontSize:"16px", color: isFinal ? "#aaa" : "#c8f54a" }}>{homeScore}</span> : ""}</div>
           </div>
           <div style={{ display:"flex", gap:"6px" }}>
             {game.vegasSpread != null && <StatPill label="SPREAD" val={`${game.vegasSpread > 0 ? "+" : ""}${game.vegasSpread}`} />}
@@ -86,9 +99,26 @@ function DashboardTab({ isPremium }) {
   const dates = Array.from({ length:4 }, (_, i) => { const d = new Date(today); d.setDate(d.getDate() + i); return d; });
   const [selectedDate, setSelectedDate] = useState(today);
   const [allGames, setAllGames] = useState([]);
+  const [scores, setScores] = useState({});
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
   const [lastUpdated, setLastUpdated] = useState(null);
+
+  // Fetch scores every 5 minutes
+  useEffect(() => {
+    const fetchAllScores = () => {
+      DASH_SPORTS.forEach(s => {
+        fetchScores(s.id).then(data => {
+          if (Array.isArray(data) && data.length > 0) {
+            setScores(prev => ({ ...prev, [s.id]: data }));
+          }
+        }).catch(() => {});
+      });
+    };
+    fetchAllScores();
+    const interval = setInterval(fetchAllScores, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     setLoading(true);
@@ -161,7 +191,10 @@ function DashboardTab({ isPremium }) {
           {filter === "edges" ? "No edges detected for this date." : "No games found for this date."}
         </div>
       )}
-      {display.map((g, i) => <DashboardCard key={g.id || i} game={g} isPremium={isPremium} index={i} />)}
+      {display.map((g, i) => {
+        const sportScores = scores[DASH_SPORTS.find(s => s.label === g.sportLabel)?.id] || [];
+        return <DashboardCard key={g.id || i} game={g} isPremium={isPremium} index={i} scoreData={sportScores} />;
+      })}
     </div>
   );
 }
