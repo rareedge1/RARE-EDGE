@@ -135,9 +135,26 @@ function DashboardTab({ isPremium }) {
   }, []);
 
   const display = useMemo(() => {
-    const sel = selectedDate.toLocaleDateString("en-US", {timeZone:"America/Chicago"});
+    const tz = "America/Chicago";
+    const sel = selectedDate.toLocaleDateString("en-US", {timeZone:tz});
+    const now = new Date();
+    const todayStr = now.toLocaleDateString("en-US", {timeZone:tz});
     return allGames
-      .filter(g => new Date(g.rawStart).toLocaleDateString("en-US", {timeZone:"America/Chicago"}) === sel)
+      .filter(g => {
+        const gDate = new Date(g.rawStart).toLocaleDateString("en-US", {timeZone:tz});
+        if (gDate !== sel) return false;
+        // For today hide games started 6+ hours ago with no score data
+        if (sel === todayStr) {
+          const hoursSince = (now - new Date(g.rawStart)) / 3600000;
+          if (hoursSince > 6) {
+            const sp = DASH_SPORTS.find(s => s.label === g.sportLabel);
+            const sportScores = sp ? (scores[sp.id] || []) : [];
+            const hasScore = sportScores.some(s => s.home_team === g.home && s.away_team === g.away);
+            if (!hasScore) return false;
+          }
+        }
+        return true;
+      })
       .filter(g => {
         if (filter === "all") return true;
         if (filter === "edges") {
