@@ -96,7 +96,7 @@ const DASH_SPORTS = [
 
 function DashboardTab({ isPremium }) {
   const today = new Date();
-  const dates = Array.from({ length:6 }, (_, i) => { const d = new Date(today); d.setDate(d.getDate() + (i - 2)); return d; });
+  const dates = Array.from({ length:4 }, (_, i) => { const d = new Date(today); d.setDate(d.getDate() + i); return d; });
   const [selectedDate, setSelectedDate] = useState(today);
   const [allGames, setAllGames] = useState([]);
   const [scores, setScores] = useState({});
@@ -135,15 +135,9 @@ function DashboardTab({ isPremium }) {
   }, []);
 
   const display = useMemo(() => {
-    
-     const selStr = selectedDate.toDateString();
-return allGames.filter(g => {
-  const gd = new Date(g.rawStart);
-  // Check current day AND day before/after to account for timezone
-  const diff = Math.abs(gd - selectedDate) / (1000 * 60 * 60 * 24);
-  return gd.toDateString() === selStr || 
-    (diff < 1 && gd.toLocaleDateString("en-US") === selectedDate.toLocaleDateString("en-US"));
-}) .filter(g => new Date(g.rawStart).toLocaleDateString("en-US") === selStr)
+    const selStr = selectedDate.toLocaleDateString("en-US");
+    return allGames
+      .filter(g => new Date(g.rawStart).toLocaleDateString("en-US") === selStr)
       .filter(g => {
         if (filter === "all") return true;
         if (filter === "edges") {
