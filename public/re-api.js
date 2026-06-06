@@ -101,7 +101,14 @@ async function fetchMMA() {
   return fetchOdds("mma_mixed_martial_arts", "h2h");
 }
 
-// College Baseball/Softball
+// Fetch live/final scores for a sport
+async function fetchScores(sport) {
+  try {
+    const r = await fetch(`/api/scores?sport=${sport}`);
+    if (!r.ok) return [];
+    return r.json();
+  } catch { return []; }
+}
 async function fetchCollegeBaseball() {
   try { return await fetchOdds("baseball_ncaa", "spreads,totals,h2h"); }
   catch { return []; }
