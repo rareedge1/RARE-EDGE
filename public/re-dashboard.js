@@ -135,9 +135,15 @@ function DashboardTab({ isPremium }) {
   }, []);
 
   const display = useMemo(() => {
-    const selStr = selectedDate.toLocaleDateString("en-US");
-    return allGames
-      .filter(g => new Date(g.rawStart).toLocaleDateString("en-US") === selStr)
+    
+     const selStr = selectedDate.toDateString();
+return allGames.filter(g => {
+  const gd = new Date(g.rawStart);
+  // Check current day AND day before/after to account for timezone
+  const diff = Math.abs(gd - selectedDate) / (1000 * 60 * 60 * 24);
+  return gd.toDateString() === selStr || 
+    (diff < 1 && gd.toLocaleDateString("en-US") === selectedDate.toLocaleDateString("en-US"));
+}) .filter(g => new Date(g.rawStart).toLocaleDateString("en-US") === selStr)
       .filter(g => {
         if (filter === "all") return true;
         if (filter === "edges") {
