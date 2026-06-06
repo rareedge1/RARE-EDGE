@@ -135,9 +135,9 @@ function DashboardTab({ isPremium }) {
   }, []);
 
   const display = useMemo(() => {
-    const selStr = selectedDate.toLocaleDateString("en-US");
+    const sel = selectedDate.toLocaleDateString("en-US", {timeZone:"America/Chicago"});
     return allGames
-      .filter(g => new Date(g.rawStart).toLocaleDateString("en-US") === selStr)
+      .filter(g => new Date(g.rawStart).toLocaleDateString("en-US", {timeZone:"America/Chicago"}) === sel)
       .filter(g => {
         if (filter === "all") return true;
         if (filter === "edges") {
