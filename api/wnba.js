@@ -4,45 +4,58 @@ export default async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(200).end();
 
   try {
-    const standingsRes = await fetch(
-      "https://site.api.espn.com/apis/v2/sports/basketball/wnba/standings?season=2025"
+    // Use ESPN scoreboard/teams endpoint which has actual records
+    const r = await fetch(
+      "https://site.api.espn.com/apis/site/v2/sports/basketball/wnba/teams?limit=20"
     );
-    const standingsData = await standingsRes.json();
+    const data = await r.json();
 
     const teams = {};
-    const groups = standingsData.children || [];
+    for (const item of data.sports?.[0]?.leagues?.[0]?.teams || []) {
+      const t = item.team;
+      const shortName = t?.shortDisplayName || t?.displayName?.split(" ").pop();
+      const record = t?.record?.items?.[0];
+      const stats = record?.stats || [];
 
-    for (const conf of groups) {
-      for (const entry of conf.standings?.entries || []) {
-        const name = entry.team?.shortDisplayName || entry.team?.displayName;
-        const stats = entry.stats || [];
+      const getStat = (name) => parseFloat(stats.find(s => s.name === name)?.value || 0);
+      const wins   = getStat("wins");
+      const losses = getStat("losses");
+      const streak = stats.find(s => s.name === "streak")?.displayValue || "";
 
-        const getStat  = (abbr) => parseFloat(stats.find(s => s.abbreviation === abbr)?.value || 0);
-        const getStatStr = (abbr) => stats.find(s => s.abbreviation === abbr)?.displayValue || "";
+      // Fetch last 10 from team record
+      const overallRecord = t?.record?.items?.find(i => i.type === "total");
+      const homeRecord    = t?.record?.items?.find(i => i.type === "home");
+      const awayRecord    = t?.record?.items?.find(i => i.type === "road");
 
-        const l10 = getStatStr("L10");
-        const l10Parts = l10.split("-");
-        const winsL10   = parseInt(l10Parts[0] || 0);
-        const lossesL10 = parseInt(l10Parts[1] || 0);
-        const ppg  = getStat("ppg");
-        const oppg = getStat("oppg");
+      // Use wins/losses to estimate L10 (ESPN doesn't expose L10 directly here)
+      // but we can get it from the standings endpoint with correct field names
+      const winsL10   = parseInt(stats.find(s => s.shortDisplayName === "L10" || s.name === "Last Ten Games")?.value || 0);
+      const lossesL10 = 10 - winsL10;
 
-        if (name) {
-          const key = entry.team?.shortDisplayName || name.split(" ").pop();
-          teams[key] = {
-            fullName: name,
-            ortg: ppg  > 0 ? +(ppg  * (100/84)).toFixed(1) : 100,
-            drtg: oppg > 0 ? +(oppg * (100/84)).toFixed(1) : 103,
-            pace: 84,
-            last10: { winsL10, lossesL10 },
-            ppg:  ppg.toFixed(1),
-            oppg: oppg.toFixed(1),
-          };
-        }
+      // Momentum-adjusted ratings
+      const baseOrtg = 100;
+      const baseDrtg = 103;
+      const winPct = (wins + losses) > 0 ? wins / (wins + losses) : 0.5;
+      const ortgAdj = (winPct - 0.5) * 8;
+      const drtgAdj = (0.5 - winPct) * 8;
+
+      if (shortName) {
+        teams[shortName] = {
+          fullName: t?.displayName,
+          abbr: t?.abbreviation,
+          ortg: +(baseOrtg + ortgAdj).toFixed(1),
+          drtg: +(baseDrtg + drtgAdj).toFixed(1),
+          pace: 84,
+          wins, losses,
+          winPct: +winPct.toFixed(3),
+          last10: winsL10 > 0 ? { winsL10, lossesL10 } : null,
+          streak,
+          record: overallRecord?.summary || `${wins}-${losses}`,
+        };
       }
     }
 
-    res.setHeader("Cache-Control", "s-maxage=3600");
+    res.setHeader("Cache-Control", "s-maxage=1800");
     return res.status(200).json(teams);
   } catch(e) {
     return res.status(500).json({ error: e.message });
