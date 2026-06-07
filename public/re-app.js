@@ -174,13 +174,25 @@ function RareEdge() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [user, setUser]                     = useState(() => getStoredUser());
 
-  // Handle upgrade success
+  // Handle upgrade success — update Supabase + localStorage
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("upgraded") === "true") {
-      const u = getStoredUser();
-      if (u) { u.plan = "premium"; localStorage.setItem("re_user", JSON.stringify(u)); setUser({...u}); }
       window.history.replaceState({}, "", "/app");
+      const u = getStoredUser();
+      if (u?.email) {
+        dbSetPremium(u.email).then(updated => {
+          const fresh = updated || u;
+          fresh.plan = "premium";
+          localStorage.setItem("re_user", JSON.stringify(fresh));
+          setUser({...fresh});
+        }).catch(() => {
+          // Fallback: at least update localStorage
+          u.plan = "premium";
+          localStorage.setItem("re_user", JSON.stringify(u));
+          setUser({...u});
+        });
+      }
     }
   }, []);
 
@@ -192,8 +204,19 @@ function RareEdge() {
     if (!seen) setShowOnboarding(true);
   };
 
-  const handleSignInDone = (u) => {
-    setUser(u);
+  const handleSignInDone = async (u) => {
+    // Always pull fresh plan status from Supabase on sign in
+    try {
+      const fresh = await dbGetUser(u.email);
+      if (fresh) {
+        localStorage.setItem("re_user", JSON.stringify(fresh));
+        setUser(fresh);
+      } else {
+        setUser(u);
+      }
+    } catch {
+      setUser(u);
+    }
     setShowSignIn(false);
     setShowSignup(false);
   };
