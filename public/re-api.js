@@ -124,5 +124,23 @@ async function fetchMLBLive() {
     const r = await fetch("/api/mlb");
     if (!r.ok) return [];
     return r.json();
-  } catch { return []; }
+  } catch(err) { return []; }
+}
+
+// Fetch live NBA team stats
+async function fetchNBALive() {
+  try {
+    const r = await fetch("/api/nba");
+    if (!r.ok) return {};
+    return r.json();
+  } catch(err) { return {}; }
+}
+
+// Fetch live WNBA team stats
+async function fetchWNBALive() {
+  try {
+    const r = await fetch("/api/wnba");
+    if (!r.ok) return {};
+    return r.json();
+  } catch(err) { return {}; }
 }
