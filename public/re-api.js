@@ -117,3 +117,12 @@ async function fetchCollegeSoftball() {
   try { return await fetchOdds("softball_ncaa", "spreads,totals,h2h"); }
   catch { return []; }
 }
+
+// Fetch live MLB pitcher + team form data
+async function fetchMLBLive() {
+  try {
+    const r = await fetch("/api/mlb");
+    if (!r.ok) return [];
+    return r.json();
+  } catch { return []; }
+}
