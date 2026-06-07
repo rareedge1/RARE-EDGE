@@ -1,19 +1,83 @@
+// ── EDGE TRACK RECORD BANNER ─────────────────────────────────
+function EdgeTrackRecord() {
+  const [record, setRecord] = useState(null);
+
+  useEffect(() => {
+    fetch("/api/edge-log")
+      .then(r => r.json())
+      .then(data => {
+        if (!Array.isArray(data)) return;
+        const wins   = data.filter(e => e.result === "win").length;
+        const losses = data.filter(e => e.result === "loss").length;
+        const pushes = data.filter(e => e.result === "push").length;
+        const total  = wins + losses + pushes;
+        const hitRate = total > 0 ? Math.round((wins / (wins + losses)) * 100) : null;
+        setRecord({ wins, losses, pushes, total, hitRate, recent: data.slice(0, 5) });
+      })
+      .catch(() => {});
+  }, []);
+
+  if (!record || record.total === 0) return null;
+
+  return (
+    <div style={{ background:"rgba(200,245,74,0.04)", border:"1px solid rgba(200,245,74,0.12)", borderRadius:"12px", padding:"12px 14px", marginBottom:"16px" }}>
+      <div style={{ fontSize:"9px", color:"#c8f54a", letterSpacing:"2px", fontWeight:"700", marginBottom:"8px" }}>⚡ RARE EDGE TRACK RECORD · LAST 50 CALLS</div>
+      <div style={{ display:"flex", gap:"10px", marginBottom:"10px" }}>
+        <div style={{ textAlign:"center", flex:1 }}>
+          <div style={{ fontFamily:"'Bebas Neue',cursive", fontSize:"28px", color:"#c8f54a", lineHeight:1 }}>{record.wins}</div>
+          <div style={{ fontSize:"9px", color:"#555", letterSpacing:"1px" }}>WINS</div>
+        </div>
+        <div style={{ textAlign:"center", flex:1 }}>
+          <div style={{ fontFamily:"'Bebas Neue',cursive", fontSize:"28px", color:"#ef4444", lineHeight:1 }}>{record.losses}</div>
+          <div style={{ fontSize:"9px", color:"#555", letterSpacing:"1px" }}>LOSSES</div>
+        </div>
+        {record.pushes > 0 && (
+          <div style={{ textAlign:"center", flex:1 }}>
+            <div style={{ fontFamily:"'Bebas Neue',cursive", fontSize:"28px", color:"#aaa", lineHeight:1 }}>{record.pushes}</div>
+            <div style={{ fontSize:"9px", color:"#555", letterSpacing:"1px" }}>PUSHES</div>
+          </div>
+        )}
+        {record.hitRate !== null && (
+          <div style={{ textAlign:"center", flex:1 }}>
+            <div style={{ fontFamily:"'Bebas Neue',cursive", fontSize:"28px", color: record.hitRate >= 55 ? "#c8f54a" : record.hitRate >= 50 ? "#aaa" : "#ef4444", lineHeight:1 }}>{record.hitRate}%</div>
+            <div style={{ fontSize:"9px", color:"#555", letterSpacing:"1px" }}>HIT RATE</div>
+          </div>
+        )}
+      </div>
+      {/* Recent calls */}
+      <div style={{ display:"flex", gap:"4px", flexWrap:"wrap" }}>
+        {record.recent.map((e, i) => (
+          <div key={i} style={{
+            fontSize:"9px", padding:"2px 6px", borderRadius:"4px", fontWeight:"700",
+            background: e.result === "win" ? "rgba(200,245,74,0.12)" : e.result === "loss" ? "rgba(239,68,68,0.12)" : "rgba(255,255,255,0.06)",
+            color: e.result === "win" ? "#c8f54a" : e.result === "loss" ? "#ef4444" : "#555"
+          }}>
+            {e.sport} {e.away?.split(" ").pop()}@{e.home?.split(" ").pop()} {e.result === "win" ? "✓" : e.result === "loss" ? "✗" : "·"}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── DASHBOARD GAME CARD ──────────────────────────────────────
-function DashboardCard({ game, isPremium, index, scoreData }) {
+function DashboardCard({ game, isPremium, index, scoreData, mlbLive }) {
   const [open, setOpen] = useState(false);
 
-  // Get live/final score for this game — match by team names
   const score = scoreData?.find(s =>
     (s.home_team === game.home && s.away_team === game.away) ||
     (s.home_team === game.away && s.away_team === game.home) ||
     s.id === game.id
   );
-  const isLive = score?.completed === false && score?.scores?.length > 0;
+  const isLive  = score?.completed === false && score?.scores?.length > 0;
   const isFinal = score?.completed === true;
   const homeScore = score?.scores?.find(s => s.name === game.home)?.score;
   const awayScore = score?.scores?.find(s => s.name === game.away)?.score;
 
-  // Auto-project based on sport
+  const liveData = game.sportLabel?.toLowerCase() === "mlb"
+    ? findMLBLiveData(game.home, game.away, mlbLive)
+    : null;
+
   const proj = useMemo(() => {
     const sp = game.sportLabel?.toLowerCase();
     if (sp === "nfl" || sp === "ncaaf" || sp === "ufl") {
@@ -22,13 +86,61 @@ function DashboardCard({ game, isPremium, index, scoreData }) {
     }
     if (sp === "nba" || sp === "ncaab") return projectBasketball(findTeam(game.home, NBA), findTeam(game.away, NBA), game.vegasSpread, game.vegasTotal);
     if (sp === "wnba") return projectBasketball(findTeam(game.home, WNBA), findTeam(game.away, WNBA), game.vegasSpread, game.vegasTotal, { homeAdv:2.5 });
-    if (sp === "mlb") return projectBaseball(findTeam(game.home, MLB), findTeam(game.away, MLB), game.vegasTotal);
+    if (sp === "mlb") return projectBaseball(findTeam(game.home, MLB), findTeam(game.away, MLB), game.vegasTotal, { parkFactor: findTeam(game.home, MLB)?.park || 1.0 }, liveData);
     if (sp === "nhl") return projectHockey(findTeam(game.home, NHL), findTeam(game.away, NHL), game.vegasTotal);
     return null;
-  }, [game]);
+  }, [game, liveData]);
 
   const hasEdge = proj?.hasEdge;
   const sportKey = game.sportLabel?.toLowerCase().replace("/", "_").replace(" ", "_") || "nfl";
+
+  // Auto-log edge calls to Supabase
+  useEffect(() => {
+    if (!hasEdge || !isPremium) return;
+    const today = new Date().toLocaleDateString("en-US", { timeZone: "America/Chicago" });
+    fetch("/api/edge-log", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        sport: game.sportLabel,
+        home: game.home,
+        away: game.away,
+        game_date: today,
+        proj_total: proj?.projTotal || null,
+        vegas_total: game.vegasTotal || null,
+        edge_value: proj?.vTotal || proj?.vSpread || null,
+        edge_type: proj?.vTotal ? "total" : "spread",
+      })
+    }).catch(() => {});
+  }, [hasEdge]);
+
+  // Auto-update result when game is final
+  useEffect(() => {
+    if (!isFinal || !hasEdge || !homeScore || !awayScore) return;
+    const actualTotal = parseFloat(homeScore) + parseFloat(awayScore);
+    const projTotal = proj?.projTotal;
+    const vegasTotal = game.vegasTotal;
+    if (!projTotal || !vegasTotal) return;
+
+    // Determine win/loss: did our over/under call hit?
+    const ourCall = projTotal > vegasTotal ? "over" : "under";
+    const actualCall = actualTotal > vegasTotal ? "over" : actualTotal < vegasTotal ? "under" : "push";
+    const result = actualCall === "push" ? "push" : ourCall === actualCall ? "win" : "loss";
+
+    const today = new Date().toLocaleDateString("en-US", { timeZone: "America/Chicago" });
+    // Find the edge call and update it
+    fetch(`/api/edge-log?home=eq.${encodeURIComponent(game.home)}&away=eq.${encodeURIComponent(game.away)}&game_date=eq.${encodeURIComponent(today)}&select=id`)
+      .then(r => r.json())
+      .then(rows => {
+        if (rows[0]?.id) {
+          fetch("/api/edge-log", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id: rows[0].id, result })
+          }).catch(() => {});
+        }
+      }).catch(() => {});
+  }, [isFinal, homeScore, awayScore]);
 
   return (
     <div onClick={() => setOpen(true)} style={{
@@ -39,7 +151,6 @@ function DashboardCard({ game, isPremium, index, scoreData }) {
       animation:`fadeIn 0.3s ease ${index * 0.03}s both`,
       marginBottom:"10px"
     }}>
-      {/* Edge banner */}
       {hasEdge && isPremium && (
         <div style={{ padding:"5px 14px", background:"rgba(200,245,74,0.10)", borderBottom:"1px solid rgba(200,245,74,0.15)", fontSize:"10px", color:"#c8f54a", letterSpacing:"2px", fontWeight:"700" }}>
           ⚡ EDGE DETECTED
@@ -55,7 +166,7 @@ function DashboardCard({ game, isPremium, index, scoreData }) {
       <div style={{ padding:"12px 14px" }}>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:"8px" }}>
           <div style={{ fontSize:"9px", color:"#444" }}>{game.sportLabel} · {game.time}</div>
-          {isLive && <div style={{ fontSize:"9px", color:"#c8f54a", fontWeight:"700", letterSpacing:"1px", background:"rgba(200,245,74,0.12)", padding:"2px 6px", borderRadius:"4px" }}>● LIVE</div>}
+          {isLive  && <div style={{ fontSize:"9px", color:"#c8f54a", fontWeight:"700", letterSpacing:"1px", background:"rgba(200,245,74,0.12)", padding:"2px 6px", borderRadius:"4px" }}>● LIVE</div>}
           {isFinal && <div style={{ fontSize:"9px", color:"#555", fontWeight:"700", letterSpacing:"1px" }}>FINAL</div>}
         </div>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
@@ -71,6 +182,14 @@ function DashboardCard({ game, isPremium, index, scoreData }) {
             {proj && !isPremium && <StatPill label="EDGE" val="🔒" />}
           </div>
         </div>
+        {/* MLB pitcher info on dashboard */}
+        {liveData && isPremium && proj?.pitchers && (
+          <div style={{ marginTop:"8px", display:"flex", gap:"6px", fontSize:"9px", color:"#555" }}>
+            <span>{proj.pitchers.away.name} ({proj.pitchers.away.era?.toFixed(2)})</span>
+            <span style={{ color:"#333" }}>vs</span>
+            <span>{proj.pitchers.home.name} ({proj.pitchers.home.era?.toFixed(2)})</span>
+          </div>
+        )}
       </div>
 
       {open && ReactDOM.createPortal(
@@ -98,11 +217,12 @@ function DashboardTab({ isPremium }) {
   const today = new Date();
   const dates = Array.from({ length:4 }, (_, i) => { const d = new Date(today); d.setDate(d.getDate() + i); return d; });
   const [selectedDate, setSelectedDate] = useState(today);
-  const [allGames, setAllGames] = useState([]);
-  const [scores, setScores] = useState({});
-  const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState("all");
-  const [lastUpdated, setLastUpdated] = useState(null);
+  const [allGames, setAllGames]         = useState([]);
+  const [scores, setScores]             = useState({});
+  const [mlbLive, setMlbLive]           = useState([]);
+  const [loading, setLoading]           = useState(true);
+  const [filter, setFilter]             = useState("all");
+  const [lastUpdated, setLastUpdated]   = useState(null);
 
   // Fetch scores every 5 minutes
   useEffect(() => {
@@ -120,7 +240,12 @@ function DashboardTab({ isPremium }) {
     return () => clearInterval(interval);
   }, []);
 
-  // Fetch odds once on mount, then merge completed games from scores
+  // Fetch live MLB data once
+  useEffect(() => {
+    fetchMLBLive().then(data => setMlbLive(data || [])).catch(() => {});
+  }, []);
+
+  // Fetch odds once on mount, merge completed games from scores
   useEffect(() => {
     setLoading(true);
     Promise.all(
@@ -167,20 +292,23 @@ function DashboardTab({ isPremium }) {
           if (sp === "nfl" || sp === "ncaaf") proj = projectFootball(findTeam(g.home, NFL), findTeam(g.away, NFL), g.vegasSpread, g.vegasTotal);
           else if (sp === "nba" || sp === "ncaab") proj = projectBasketball(findTeam(g.home, NBA), findTeam(g.away, NBA), g.vegasSpread, g.vegasTotal);
           else if (sp === "wnba") proj = projectBasketball(findTeam(g.home, WNBA), findTeam(g.away, WNBA), g.vegasSpread, g.vegasTotal, { homeAdv:2.5 });
-          else if (sp === "mlb") proj = projectBaseball(findTeam(g.home, MLB), findTeam(g.away, MLB), g.vegasTotal);
+          else if (sp === "mlb") proj = projectBaseball(findTeam(g.home, MLB), findTeam(g.away, MLB), g.vegasTotal, {}, findMLBLiveData(g.home, g.away, mlbLive));
           else if (sp === "nhl") proj = projectHockey(findTeam(g.home, NHL), findTeam(g.away, NHL), g.vegasTotal);
           return proj?.hasEdge;
         }
         return g.sportLabel?.toLowerCase() === filter;
       })
       .sort((a, b) => new Date(a.rawStart) - new Date(b.rawStart));
-  }, [allGames, selectedDate, filter]);
+  }, [allGames, selectedDate, filter, mlbLive]);
 
   const fmtDate = d => d.toLocaleDateString("en-US", { weekday:"short", month:"short", day:"numeric" });
   const isToday = d => d.toDateString() === today.toDateString();
 
   return (
     <div>
+      {/* Track record banner — premium only */}
+      {isPremium && <EdgeTrackRecord />}
+
       {/* Date selector */}
       <div style={{ display:"flex", gap:"8px", marginBottom:"16px", overflowX:"auto", paddingBottom:"4px" }}>
         {dates.map((d, i) => (
@@ -205,7 +333,6 @@ function DashboardTab({ isPremium }) {
         {lastUpdated && <span style={{ color:"#333" }}>Updated {lastUpdated}</span>}
       </div>
 
-      {/* Games */}
       {loading && <div style={{ textAlign:"center", padding:"40px", color:"#444" }}>Loading games...</div>}
       {!loading && display.length === 0 && (
         <div style={{ textAlign:"center", padding:"40px", color:"#333", fontSize:"13px" }}>
@@ -214,7 +341,7 @@ function DashboardTab({ isPremium }) {
       )}
       {display.map((g, i) => {
         const sportScores = scores[DASH_SPORTS.find(s => s.label === g.sportLabel)?.id] || [];
-        return <DashboardCard key={g.id || i} game={g} isPremium={isPremium} index={i} scoreData={sportScores} />;
+        return <DashboardCard key={g.id || i} game={g} isPremium={isPremium} index={i} scoreData={sportScores} mlbLive={mlbLive} />;
       })}
     </div>
   );
