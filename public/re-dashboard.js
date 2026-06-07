@@ -147,8 +147,9 @@ function DashboardTab({ isPremium }) {
       scoreAway: s.scores?.find(x => x.name === s.away_team)?.score,
     }));
   setAllGames([...oddsGames, ...scored]);
-  setLastUpdated(new Date().toLocaleTimeString(.finally(() => setLoading(false));
-  }, []);
+  setLastUpdated(new Date().toLocaleTimeString());
+      }).finally(() => setLoading(false));
+    }, []);
 
   const display = useMemo(() => {
   const tz = "America/Chicago";
