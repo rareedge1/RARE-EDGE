@@ -128,10 +128,26 @@ function DashboardTab({ isPremium }) {
           .then(data => (data || []).map(g => ({ ...parseGame(g, s.label), sportEmoji: s.emoji })))
           .catch(() => [])
       )
-    ).then(results => {
-      setAllGames(results.flat());
-      setLastUpdated(new Date().toLocaleTimeString());
-    }).finally(() => setLoading(false));
+    }).then(results => {
+  const oddsGames = results.flat();
+  // Merge scores: add completed games not in odds feed
+  const allScores = Object.values(scores).flat();
+  const scored = allScores
+    .filter(s => s.completed)
+    .filter(s => !oddsGames.some(g => g.home === s.home_team && g.away === s.away_team))
+    .map(s => ({
+      id: s.id,
+      home: s.home_team,
+      away: s.away_team,
+      rawStart: s.commence_time,
+      time: new Date(s.commence_time).toLocaleString("en-US", {timeZone:"America/Chicago"}),
+      sportLabel: DASH_SPORTS.find(d => (scores[d.id]||[]).some(x => x.id === s.id))?.label || "MLB",
+      completed: true,
+      scoreHome: s.scores?.find(x => x.name === s.home_team)?.score,
+      scoreAway: s.scores?.find(x => x.name === s.away_team)?.score,
+    }));
+  setAllGames([...oddsGames, ...scored]);
+  setLastUpdated(new Date().toLocaleTimeString(.finally(() => setLoading(false));
   }, []);
 
   const display = useMemo(() => {
