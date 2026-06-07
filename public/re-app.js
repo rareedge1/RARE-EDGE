@@ -214,7 +214,7 @@ function RareEdge() {
       } else {
         setUser(u);
       }
-    } catch {
+    } catch(err) {
       setUser(u);
     }
     setShowSignIn(false);
