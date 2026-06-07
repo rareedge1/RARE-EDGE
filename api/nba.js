@@ -4,62 +4,50 @@ export default async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(200).end();
 
   try {
-    const headers = {
-      "User-Agent": "Mozilla/5.0",
-      "Accept": "application/json",
-      "Referer": "https://www.nba.com",
-      "Origin": "https://www.nba.com"
-    };
-
-    // Fetch team stats for current season
-    const [teamStatsRes, standingsRes] = await Promise.all([
-      fetch("https://stats.nba.com/stats/leaguedashteamstats?Conference=&DateFrom=&DateTo=&Division=&GameScope=&GameSegment=&LastNGames=0&LeagueID=00&Location=&MeasureType=Advanced&Month=0&OpponentTeamID=0&Outcome=&PORound=0&PaceAdjust=N&PerMode=PerGame&Period=0&PlayerExperience=&PlayerPosition=&PlusMinus=N&Rank=N&Season=2024-25&SeasonSegment=&SeasonType=Playoffs&ShotClockRange=&StarterBench=&TeamID=0&TwoWay=0&VsConference=&VsDivision=", { headers }),
-      fetch("https://stats.nba.com/stats/leaguedashteamstats?Conference=&DateFrom=&DateTo=&Division=&GameScope=&GameSegment=&LastNGames=10&LeagueID=00&Location=&MeasureType=Base&Month=0&OpponentTeamID=0&Outcome=&PORound=0&PaceAdjust=N&PerMode=PerGame&Period=0&PlayerExperience=&PlayerPosition=&PlusMinus=N&Rank=N&Season=2024-25&SeasonSegment=&SeasonType=Playoffs&ShotClockRange=&StarterBench=&TeamID=0&TwoWay=0&VsConference=&VsDivision=", { headers })
+    // ESPN public API - no auth needed, no blocking
+    const [standingsRes, scoresRes] = await Promise.all([
+      fetch("https://site.api.espn.com/apis/v2/sports/basketball/nba/standings?season=2025"),
+      fetch("https://site.api.espn.com/apis/v2/sports/basketball/nba/teams?limit=30")
     ]);
 
-    const advData = await teamStatsRes.json();
-    const last10Data = await standingsRes.json();
-
-    // Parse advanced stats (ortg, drtg, pace)
-    const advHeaders = advData.resultSets?.[0]?.headers || [];
-    const advRows = advData.resultSets?.[0]?.rowSet || [];
-    const nameIdx = advHeaders.indexOf("TEAM_NAME");
-    const ortgIdx = advHeaders.indexOf("OFF_RATING");
-    const drtgIdx = advHeaders.indexOf("DEF_RATING");
-    const paceIdx = advHeaders.indexOf("PACE");
-    const netIdx  = advHeaders.indexOf("NET_RATING");
-
-    // Parse last 10 games
-    const l10Headers = last10Data.resultSets?.[0]?.headers || [];
-    const l10Rows = last10Data.resultSets?.[0]?.rowSet || [];
-    const l10NameIdx = l10Headers.indexOf("TEAM_NAME");
-    const l10WinIdx  = l10Headers.indexOf("W");
-    const l10LossIdx = l10Headers.indexOf("L");
-    const l10PtsIdx  = l10Headers.indexOf("PTS");
-
-    const last10Map = {};
-    for (const row of l10Rows) {
-      const name = row[l10NameIdx];
-      if (name) last10Map[name] = {
-        winsL10: row[l10WinIdx],
-        lossesL10: row[l10LossIdx],
-        ptsL10: parseFloat(row[l10PtsIdx] || 0).toFixed(1),
-      };
-    }
+    const standingsData = await standingsRes.json();
+    const teamsData = await scoresRes.json();
 
     const teams = {};
-    for (const row of advRows) {
-      const name = row[nameIdx];
-      if (!name) continue;
-      const shortName = name.split(" ").pop(); // "Knicks", "Spurs" etc
-      teams[shortName] = {
-        fullName: name,
-        ortg: parseFloat(row[ortgIdx] || 110),
-        drtg: parseFloat(row[drtgIdx] || 112),
-        pace: parseFloat(row[paceIdx] || 98),
-        netRtg: parseFloat(row[netIdx] || 0),
-        last10: last10Map[name] || null,
-      };
+
+    // Parse standings for W/L last 10
+    const groups = standingsData.children || [];
+    for (const conf of groups) {
+      for (const entry of conf.standings?.entries || []) {
+        const name = entry.team?.shortDisplayName || entry.team?.displayName;
+        const shortName = entry.team?.abbreviation;
+        const stats = entry.stats || [];
+
+        const getStat = (abbr) => parseFloat(stats.find(s => s.abbreviation === abbr)?.value || 0);
+        const getStatStr = (abbr) => stats.find(s => s.abbreviation === abbr)?.displayValue || "";
+
+        const l10 = getStatStr("L10");
+        const l10Parts = l10.split("-");
+        const winsL10 = parseInt(l10Parts[0] || 0);
+        const lossesL10 = parseInt(l10Parts[1] || 0);
+        const ppg = getStat("ppg");
+        const oppg = getStat("oppg");
+
+        if (name) {
+          const key = entry.team?.shortDisplayName || name.split(" ").pop();
+          teams[key] = {
+            fullName: name,
+            abbr: shortName,
+            // Estimate ortg/drtg from ppg (scaled to per-100 possessions ~98 pace)
+            ortg: ppg > 0 ? +(ppg * (100/98)).toFixed(1) : 113,
+            drtg: oppg > 0 ? +(oppg * (100/98)).toFixed(1) : 113,
+            pace: 98,
+            last10: { winsL10, lossesL10 },
+            ppg: ppg.toFixed(1),
+            oppg: oppg.toFixed(1),
+          };
+        }
+      }
     }
 
     res.setHeader("Cache-Control", "s-maxage=3600");

@@ -4,60 +4,42 @@ export default async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(200).end();
 
   try {
-    const headers = {
-      "User-Agent": "Mozilla/5.0",
-      "Accept": "application/json",
-      "Referer": "https://www.wnba.com",
-      "Origin": "https://www.wnba.com"
-    };
-
-    // WNBA team stats - current season
-    const [advRes, last10Res] = await Promise.all([
-      fetch("https://stats.wnba.com/stats/leaguedashteamstats?Conference=&DateFrom=&DateTo=&Division=&GameScope=&GameSegment=&LastNGames=0&LeagueID=10&Location=&MeasureType=Advanced&Month=0&OpponentTeamID=0&Outcome=&PORound=0&PaceAdjust=N&PerMode=PerGame&Period=0&PlayerExperience=&PlayerPosition=&PlusMinus=N&Rank=N&Season=2025&SeasonSegment=&SeasonType=Regular+Season&ShotClockRange=&StarterBench=&TeamID=0&TwoWay=0&VsConference=&VsDivision=", { headers }),
-      fetch("https://stats.wnba.com/stats/leaguedashteamstats?Conference=&DateFrom=&DateTo=&Division=&GameScope=&GameSegment=&LastNGames=10&LeagueID=10&Location=&MeasureType=Base&Month=0&OpponentTeamID=0&Outcome=&PORound=0&PaceAdjust=N&PerMode=PerGame&Period=0&PlayerExperience=&PlayerPosition=&PlusMinus=N&Rank=N&Season=2025&SeasonSegment=&SeasonType=Regular+Season&ShotClockRange=&StarterBench=&TeamID=0&TwoWay=0&VsConference=&VsDivision=", { headers })
-    ]);
-
-    const advData = await advRes.json();
-    const last10Data = await last10Res.json();
-
-    const advHeaders = advData.resultSets?.[0]?.headers || [];
-    const advRows    = advData.resultSets?.[0]?.rowSet  || [];
-    const nameIdx = advHeaders.indexOf("TEAM_NAME");
-    const ortgIdx = advHeaders.indexOf("OFF_RATING");
-    const drtgIdx = advHeaders.indexOf("DEF_RATING");
-    const paceIdx = advHeaders.indexOf("PACE");
-    const netIdx  = advHeaders.indexOf("NET_RATING");
-
-    const l10Headers = last10Data.resultSets?.[0]?.headers || [];
-    const l10Rows    = last10Data.resultSets?.[0]?.rowSet  || [];
-    const l10NameIdx = l10Headers.indexOf("TEAM_NAME");
-    const l10WinIdx  = l10Headers.indexOf("W");
-    const l10LossIdx = l10Headers.indexOf("L");
-    const l10PtsIdx  = l10Headers.indexOf("PTS");
-
-    const last10Map = {};
-    for (const row of l10Rows) {
-      const name = row[l10NameIdx];
-      if (name) last10Map[name] = {
-        winsL10: row[l10WinIdx],
-        lossesL10: row[l10LossIdx],
-        ptsL10: parseFloat(row[l10PtsIdx] || 0).toFixed(1),
-      };
-    }
+    const standingsRes = await fetch(
+      "https://site.api.espn.com/apis/v2/sports/basketball/wnba/standings?season=2025"
+    );
+    const standingsData = await standingsRes.json();
 
     const teams = {};
-    for (const row of advRows) {
-      const name = row[nameIdx];
-      if (!name) continue;
-      const shortName = name.split(" ").pop();
-      teams[shortName] = {
-        fullName: name,
-        ortg: parseFloat(row[ortgIdx] || 100),
-        drtg: parseFloat(row[drtgIdx] || 103),
-        pace: parseFloat(row[paceIdx] || 84),
-        netRtg: parseFloat(row[netIdx] || 0),
-        last10: last10Map[name] || null,
-      };
+    const groups = standingsData.children || [];
+
+    for (const conf of groups) {
+      for (const entry of conf.standings?.entries || []) {
+        const name = entry.team?.shortDisplayName || entry.team?.displayName;
+        const stats = entry.stats || [];
+
+        const getStat  = (abbr) => parseFloat(stats.find(s => s.abbreviation === abbr)?.value || 0);
+        const getStatStr = (abbr) => stats.find(s => s.abbreviation === abbr)?.displayValue || "";
+
+        const l10 = getStatStr("L10");
+        const l10Parts = l10.split("-");
+        const winsL10   = parseInt(l10Parts[0] || 0);
+        const lossesL10 = parseInt(l10Parts[1] || 0);
+        const ppg  = getStat("ppg");
+        const oppg = getStat("oppg");
+
+        if (name) {
+          const key = entry.team?.shortDisplayName || name.split(" ").pop();
+          teams[key] = {
+            fullName: name,
+            ortg: ppg  > 0 ? +(ppg  * (100/84)).toFixed(1) : 100,
+            drtg: oppg > 0 ? +(oppg * (100/84)).toFixed(1) : 103,
+            pace: 84,
+            last10: { winsL10, lossesL10 },
+            ppg:  ppg.toFixed(1),
+            oppg: oppg.toFixed(1),
+          };
+        }
+      }
     }
 
     res.setHeader("Cache-Control", "s-maxage=3600");
