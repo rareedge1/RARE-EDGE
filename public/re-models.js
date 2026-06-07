@@ -56,26 +56,63 @@ function projectBasketball(home, away, vegasSpread, vegasTotal, opts = {}) {
   };
 }
 
-// Baseball projection (MLB)
-function projectBaseball(home, away, vegasTotal, opts = {}) {
+// ── MLB PROJECTION — LIVE PITCHER + FORM DATA ────────────────
+// liveData: { home: { pitcher, runsLast10, ops, ... }, away: { ... } }
+function projectBaseball(home, away, vegasTotal, opts = {}, liveData = null) {
   const { homeAdv = 0.3, parkFactor = 1.0 } = opts;
   if (!home || !away) return null;
 
-  const homeRuns = (home.runs * (1 - away.era / 9)) * parkFactor + homeAdv;
-  const awayRuns = (away.runs * (1 - home.era / 9)) * parkFactor;
+  // Use live pitcher ERA if available, fall back to team ERA
+  const homePitcherEra = liveData?.home?.pitcher?.era ?? home.era;
+  const awayPitcherEra = liveData?.away?.pitcher?.era ?? away.era;
+  const homePitcherWhip = liveData?.home?.pitcher?.whip ?? home.whip;
+  const awayPitcherWhip = liveData?.away?.pitcher?.whip ?? away.whip;
 
-  const hScore = Math.max(1, +homeRuns.toFixed(1));
-  const aScore = Math.max(1, +awayRuns.toFixed(1));
+  // Use last 10 games run average if available (weighted 60/40 with season)
+  const homeRuns = liveData?.home?.runsLast10
+    ? (liveData.home.runsLast10 * 0.6 + home.runs * 0.4)
+    : home.runs;
+  const awayRuns = liveData?.away?.runsLast10
+    ? (liveData.away.runsLast10 * 0.6 + away.runs * 0.4)
+    : away.runs;
+
+  // OPS adjustment factor (league avg ~0.710)
+  const homeOpsAdj = liveData?.home?.ops ? (liveData.home.ops / 0.710) : 1.0;
+  const awayOpsAdj = liveData?.away?.ops ? (liveData.away.ops / 0.710) : 1.0;
+
+  // WHIP adjustment (higher WHIP = more baserunners = more runs allowed)
+  const homeWhipAdj = 1 + (homePitcherWhip - 1.28) * 0.15;
+  const awayWhipAdj = 1 + (awayPitcherWhip - 1.28) * 0.15;
+
+  // Core run projection
+  const homeRunsProj = (homeRuns * homeOpsAdj * (1 - awayPitcherEra / 9) * parkFactor + homeAdv) * awayWhipAdj;
+  const awayRunsProj = (awayRuns * awayOpsAdj * (1 - homePitcherEra / 9) * parkFactor) * homeWhipAdj;
+
+  const hScore = Math.max(1, +homeRunsProj.toFixed(1));
+  const aScore = Math.max(1, +awayRunsProj.toFixed(1));
   const projTotal = +(hScore + aScore).toFixed(1);
   const vTotal = vegasTotal ? +(projTotal - parseFloat(vegasTotal)).toFixed(1) : null;
 
   const homeWin = 50 + ((hScore - aScore) * 8);
+
+  // Pitcher quality score for display
+  const homePitcherGrade = homePitcherEra <= 3.0 ? "ELITE" : homePitcherEra <= 3.75 ? "GOOD" : homePitcherEra <= 4.50 ? "AVG" : "WEAK";
+  const awayPitcherGrade = awayPitcherEra <= 3.0 ? "ELITE" : awayPitcherEra <= 3.75 ? "GOOD" : awayPitcherEra <= 4.50 ? "AVG" : "WEAK";
+
   return {
     projTotal, hScore, aScore, vTotal,
     homeWin: Math.min(82, Math.max(18, Math.round(homeWin))),
     awayWin: Math.min(82, Math.max(18, Math.round(100 - homeWin))),
     hasEdge: Math.abs(vTotal || 0) >= 1.0,
     runLineEdge: hScore - aScore >= 1.5 ? "HOME RL" : aScore - hScore >= 1.5 ? "AWAY RL" : null,
+    pitchers: liveData ? {
+      home: { name: liveData.home?.pitcher?.name || "TBD", era: homePitcherEra, grade: homePitcherGrade },
+      away: { name: liveData.away?.pitcher?.name || "TBD", era: awayPitcherEra, grade: awayPitcherGrade },
+    } : null,
+    formAdj: liveData ? {
+      homeRunsLast10: liveData.home?.runsLast10,
+      awayRunsLast10: liveData.away?.runsLast10,
+    } : null,
   };
 }
 
@@ -130,4 +167,17 @@ function findTeam(name, db) {
   return db[name] || Object.entries(db).find(([k]) =>
     k === last || k.includes(last) || name.includes(k)
   )?.[1] || null;
+}
+
+// Match live MLB data to a game by team name
+function findMLBLiveData(homeName, awayName, mlbLive) {
+  if (!mlbLive || !mlbLive.length) return null;
+  return mlbLive.find(g => {
+    const h = g.homeName?.toLowerCase() || "";
+    const a = g.awayName?.toLowerCase() || "";
+    const hn = homeName?.toLowerCase() || "";
+    const an = awayName?.toLowerCase() || "";
+    return (h.includes(hn.split(" ").pop()) || hn.includes(h.split(" ").pop())) &&
+           (a.includes(an.split(" ").pop()) || an.includes(a.split(" ").pop()));
+  }) || null;
 }
