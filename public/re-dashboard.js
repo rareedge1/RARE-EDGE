@@ -82,12 +82,12 @@ function DashboardCard({ game, isPremium, index, scoreData, mlbLive }) {
     const sp = game.sportLabel?.toLowerCase();
     if (sp === "nfl" || sp === "ncaaf" || sp === "ufl") {
       const db = sp === "ufl" ? UFL : NFL;
-      return projectFootball(findTeam(game.home, db), findTeam(game.away, db), game.vegasSpread, game.vegasTotal);
+      return projectFootball(findTeam(game.home, db), findTeam(game.away, db), game.vegasSpread, game.vegasTotal, { homeML: game.homeML, awayML: game.awayML });
     }
-    if (sp === "nba" || sp === "ncaab") return projectBasketball(findTeam(game.home, NBA), findTeam(game.away, NBA), game.vegasSpread, game.vegasTotal);
-    if (sp === "wnba") return projectBasketball(findTeam(game.home, WNBA), findTeam(game.away, WNBA), game.vegasSpread, game.vegasTotal, { homeAdv:2.5 });
-    if (sp === "mlb") return projectBaseball(findTeam(game.home, MLB), findTeam(game.away, MLB), game.vegasTotal, { parkFactor: findTeam(game.home, MLB)?.park || 1.0 }, liveData);
-    if (sp === "nhl") return projectHockey(findTeam(game.home, NHL), findTeam(game.away, NHL), game.vegasTotal);
+    if (sp === "nba" || sp === "ncaab") return projectBasketball(findTeam(game.home, NBA), findTeam(game.away, NBA), game.vegasSpread, game.vegasTotal, { homeML: game.homeML, awayML: game.awayML });
+    if (sp === "wnba") return projectBasketball(findTeam(game.home, WNBA), findTeam(game.away, WNBA), game.vegasSpread, game.vegasTotal, { homeAdv:2.5, homeML: game.homeML, awayML: game.awayML });
+    if (sp === "mlb") return projectBaseball(findTeam(game.home, MLB), findTeam(game.away, MLB), game.vegasTotal, { parkFactor: findTeam(game.home, MLB)?.park || 1.0, homeML: game.homeML, awayML: game.awayML }, liveData);
+    if (sp === "nhl") return projectHockey(findTeam(game.home, NHL), findTeam(game.away, NHL), game.vegasTotal, { homeML: game.homeML, awayML: game.awayML });
     return null;
   }, [game, liveData]);
 
@@ -291,11 +291,11 @@ function DashboardTab({ isPremium }) {
         if (filter === "edges") {
           const sp = g.sportLabel?.toLowerCase();
           let proj = null;
-          if (sp === "nfl" || sp === "ncaaf") proj = projectFootball(findTeam(g.home, NFL), findTeam(g.away, NFL), g.vegasSpread, g.vegasTotal);
-          else if (sp === "nba" || sp === "ncaab") proj = projectBasketball(findTeam(g.home, NBA), findTeam(g.away, NBA), g.vegasSpread, g.vegasTotal);
-          else if (sp === "wnba") proj = projectBasketball(findTeam(g.home, WNBA), findTeam(g.away, WNBA), g.vegasSpread, g.vegasTotal, { homeAdv:2.5 });
-          else if (sp === "mlb") proj = projectBaseball(findTeam(g.home, MLB), findTeam(g.away, MLB), g.vegasTotal, {}, findMLBLiveData(g.home, g.away, mlbLive));
-          else if (sp === "nhl") proj = projectHockey(findTeam(g.home, NHL), findTeam(g.away, NHL), g.vegasTotal);
+          if (sp === "nfl" || sp === "ncaaf") proj = projectFootball(findTeam(g.home, NFL), findTeam(g.away, NFL), g.vegasSpread, g.vegasTotal, { homeML: g.homeML, awayML: g.awayML });
+          else if (sp === "nba" || sp === "ncaab") proj = projectBasketball(findTeam(g.home, NBA), findTeam(g.away, NBA), g.vegasSpread, g.vegasTotal, { homeML: g.homeML, awayML: g.awayML });
+          else if (sp === "wnba") proj = projectBasketball(findTeam(g.home, WNBA), findTeam(g.away, WNBA), g.vegasSpread, g.vegasTotal, { homeAdv:2.5, homeML: g.homeML, awayML: g.awayML });
+          else if (sp === "mlb") proj = projectBaseball(findTeam(g.home, MLB), findTeam(g.away, MLB), g.vegasTotal, { homeML: g.homeML, awayML: g.awayML }, findMLBLiveData(g.home, g.away, mlbLive));
+          else if (sp === "nhl") proj = projectHockey(findTeam(g.home, NHL), findTeam(g.away, NHL), g.vegasTotal, { homeML: g.homeML, awayML: g.awayML });
           return proj?.hasEdge;
         }
         return g.sportLabel?.toLowerCase() === filter;
