@@ -61,7 +61,7 @@ function EdgeTrackRecord() {
 }
 
 // ── DASHBOARD GAME CARD ──────────────────────────────────────
-function DashboardCard({ game, isPremium, index, scoreData, mlbLive, movement }) {
+function DashboardCard({ game, isPremium, index, scoreData, mlbLive, movement, eloRatings }) {
   const [open, setOpen] = useState(false);
 
   const score = scoreData?.find(s =>
@@ -80,16 +80,38 @@ function DashboardCard({ game, isPremium, index, scoreData, mlbLive, movement })
 
   const proj = useMemo(() => {
     const sp = game.sportLabel?.toLowerCase();
+
+    // Elo-enhanced team lookup: blend static ratings with Elo when available
+    const getTeamWithElo = (name, staticDb, ratingFields) => {
+      const base = findTeam(name, staticDb);
+      if (!base) return null;
+      const shortName = name?.split(" ").pop();
+      const eloEntry = eloRatings?.[name] || eloRatings?.[shortName];
+      if (!eloEntry || eloEntry.wins + eloEntry.losses < 5) return base; // need 5+ games
+      // Convert Elo to rating adjustment
+      const eloDiff = eloEntry.elo - 1500;
+      if (ratingFields === "basketball") {
+        return { ...base, ortg: base.ortg + eloDiff * 0.02, drtg: base.drtg - eloDiff * 0.02 };
+      }
+      if (ratingFields === "baseball") {
+        return { ...base, runs: base.runs + eloDiff * 0.003, era: base.era - eloDiff * 0.003 };
+      }
+      if (ratingFields === "football") {
+        return { ...base, off: base.off + eloDiff * 0.02, def: base.def - eloDiff * 0.02 };
+      }
+      return base;
+    };
+
     if (sp === "nfl" || sp === "ncaaf" || sp === "ufl") {
       const db = sp === "ufl" ? UFL : NFL;
-      return projectFootball(findTeam(game.home, db), findTeam(game.away, db), game.vegasSpread, game.vegasTotal, { homeML: game.homeML, awayML: game.awayML });
+      return projectFootball(getTeamWithElo(game.home, db, "football"), getTeamWithElo(game.away, db, "football"), game.vegasSpread, game.vegasTotal, { homeML: game.homeML, awayML: game.awayML });
     }
-    if (sp === "nba" || sp === "ncaab") return projectBasketball(findTeam(game.home, NBA), findTeam(game.away, NBA), game.vegasSpread, game.vegasTotal, { homeML: game.homeML, awayML: game.awayML });
-    if (sp === "wnba") return projectBasketball(findTeam(game.home, WNBA), findTeam(game.away, WNBA), game.vegasSpread, game.vegasTotal, { homeAdv:2.5, homeML: game.homeML, awayML: game.awayML });
-    if (sp === "mlb") return projectBaseball(findTeam(game.home, MLB), findTeam(game.away, MLB), game.vegasTotal, { parkFactor: findTeam(game.home, MLB)?.park || 1.0, homeML: game.homeML, awayML: game.awayML }, liveData);
+    if (sp === "nba" || sp === "ncaab") return projectBasketball(getTeamWithElo(game.home, NBA, "basketball"), getTeamWithElo(game.away, NBA, "basketball"), game.vegasSpread, game.vegasTotal, { homeML: game.homeML, awayML: game.awayML });
+    if (sp === "wnba") return projectBasketball(getTeamWithElo(game.home, WNBA, "basketball"), getTeamWithElo(game.away, WNBA, "basketball"), game.vegasSpread, game.vegasTotal, { homeAdv:2.5, homeML: game.homeML, awayML: game.awayML });
+    if (sp === "mlb") return projectBaseball(getTeamWithElo(game.home, MLB, "baseball"), getTeamWithElo(game.away, MLB, "baseball"), game.vegasTotal, { parkFactor: findTeam(game.home, MLB)?.park || 1.0, homeML: game.homeML, awayML: game.awayML }, liveData);
     if (sp === "nhl") return projectHockey(findTeam(game.home, NHL), findTeam(game.away, NHL), game.vegasTotal, { homeML: game.homeML, awayML: game.awayML });
     return null;
-  }, [game, liveData]);
+  }, [game, liveData, eloRatings]);
 
   const hasEdge = proj?.hasEdge;
   const sportKey = game.sportLabel?.toLowerCase().replace("/", "_").replace(" ", "_") || "nfl";
@@ -115,6 +137,24 @@ function DashboardCard({ game, isPremium, index, scoreData, mlbLive, movement })
       })
     }).catch(() => {});
   }, [hasEdge]);
+
+  // Update Elo ratings when game goes final
+  useEffect(() => {
+    if (!isFinal || !homeScore || !awayScore) return;
+    const sp = game.sportLabel?.toLowerCase();
+    if (!["mlb","nba","wnba","nhl","nfl"].includes(sp)) return;
+    fetch("/api/elo", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        sport: sp,
+        homeTeam: game.home,
+        awayTeam: game.away,
+        homeScore: parseFloat(homeScore),
+        awayScore: parseFloat(awayScore),
+      })
+    }).catch(() => {});
+  }, [isFinal, homeScore, awayScore]);
 
   // Auto-update result when game is final
   useEffect(() => {
@@ -246,6 +286,8 @@ function DashboardTab({ isPremium }) {
   const [filter, setFilter]             = useState("all");
   const [lastUpdated, setLastUpdated]   = useState(null);
   const [lineMovement, setLineMovement] = useState({});
+  const [eloRatings, setEloRatings]     = useState({});
+  const [clvData, setClvData]           = useState(null);
 
   // Fetch scores every 5 minutes
   useEffect(() => {
@@ -279,6 +321,22 @@ function DashboardTab({ isPremium }) {
     fetchMovement();
     const interval = setInterval(fetchMovement, 30 * 60 * 1000);
     return () => clearInterval(interval);
+  }, []);
+
+  // Fetch Elo ratings once on mount
+  useEffect(() => {
+    fetch("/api/elo")
+      .then(r => r.json())
+      .then(data => { if (data && typeof data === "object") setEloRatings(data); })
+      .catch(() => {});
+  }, []);
+
+  // Fetch CLV analysis once on mount
+  useEffect(() => {
+    fetch("/api/closing-line")
+      .then(r => r.json())
+      .then(data => { if (data?.summary) setClvData(data); })
+      .catch(() => {});
   }, []);
 
   // Fetch odds once on mount, merge completed games from scores
@@ -385,7 +443,7 @@ function DashboardTab({ isPremium }) {
       )}
       {display.map((g, i) => {
         const sportScores = scores[DASH_SPORTS.find(s => s.label === g.sportLabel)?.id] || [];
-        return <DashboardCard key={g.id || i} game={g} isPremium={isPremium} index={i} scoreData={sportScores} mlbLive={mlbLive} movement={lineMovement[g.id]} />;
+        return <DashboardCard key={g.id || i} game={g} isPremium={isPremium} index={i} scoreData={sportScores} mlbLive={mlbLive} movement={lineMovement[g.id]} eloRatings={eloRatings} />;
       })}
     </div>
   );
