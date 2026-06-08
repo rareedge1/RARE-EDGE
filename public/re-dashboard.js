@@ -61,7 +61,7 @@ function EdgeTrackRecord() {
 }
 
 // ── DASHBOARD GAME CARD ──────────────────────────────────────
-function DashboardCard({ game, isPremium, index, scoreData, mlbLive }) {
+function DashboardCard({ game, isPremium, index, scoreData, mlbLive, movement }) {
   const [open, setOpen] = useState(false);
 
   const score = scoreData?.find(s =>
@@ -192,6 +192,26 @@ function DashboardCard({ game, isPremium, index, scoreData, mlbLive }) {
             <span>{proj.pitchers.home.name} ({proj.pitchers.home.era?.toFixed(2)})</span>
           </div>
         )}
+        {/* Line movement — premium only */}
+        {isPremium && movement && (movement.spreadMove || movement.totalMove || movement.mlMove) && (
+          <div style={{ marginTop:"8px", display:"flex", gap:"6px", flexWrap:"wrap" }}>
+            {movement.spreadMove != null && movement.spreadMove !== 0 && (
+              <div style={{ fontSize:"9px", padding:"2px 7px", borderRadius:"4px", background: movement.isSharp ? "rgba(200,245,74,0.10)" : "rgba(255,255,255,0.04)", color: movement.isSharp ? "#c8f54a" : "#555" }}>
+                {movement.isSharp ? "⚡ " : ""}SPREAD {movement.firstSpread > 0 ? "+" : ""}{movement.firstSpread} → {movement.latestSpread > 0 ? "+" : ""}{movement.latestSpread}
+              </div>
+            )}
+            {movement.totalMove != null && movement.totalMove !== 0 && (
+              <div style={{ fontSize:"9px", padding:"2px 7px", borderRadius:"4px", background:"rgba(255,255,255,0.04)", color:"#555" }}>
+                O/U {movement.firstTotal} → {movement.latestTotal}
+              </div>
+            )}
+            {movement.isSharp && (
+              <div style={{ fontSize:"9px", padding:"2px 7px", borderRadius:"4px", background:"rgba(200,245,74,0.10)", color:"#c8f54a", fontWeight:"700" }}>
+                SHARP MONEY
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {open && ReactDOM.createPortal(
@@ -225,6 +245,7 @@ function DashboardTab({ isPremium }) {
   const [loading, setLoading]           = useState(true);
   const [filter, setFilter]             = useState("all");
   const [lastUpdated, setLastUpdated]   = useState(null);
+  const [lineMovement, setLineMovement] = useState({});
 
   // Fetch scores every 5 minutes
   useEffect(() => {
@@ -245,6 +266,19 @@ function DashboardTab({ isPremium }) {
   // Fetch live MLB data once
   useEffect(() => {
     fetchMLBLive().then(data => setMlbLive(data || [])).catch(() => {});
+  }, []);
+
+  // Fetch line movement data every 30 mins
+  useEffect(() => {
+    const fetchMovement = () => {
+      fetch("/api/line-movement")
+        .then(r => r.json())
+        .then(data => { if (data && typeof data === "object") setLineMovement(data); })
+        .catch(() => {});
+    };
+    fetchMovement();
+    const interval = setInterval(fetchMovement, 30 * 60 * 1000);
+    return () => clearInterval(interval);
   }, []);
 
   // Fetch odds once on mount, merge completed games from scores
@@ -274,6 +308,14 @@ function DashboardTab({ isPremium }) {
           scoreAway: s.scores?.find(x => x.name === s.away_team)?.score,
         }));
       setAllGames([...oddsGames, ...scored]);
+      // Save line snapshots for movement tracking
+      if (oddsGames.length > 0) {
+        fetch("/api/line-movement", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ games: oddsGames })
+        }).catch(() => {});
+      }
       setLastUpdated(new Date().toLocaleTimeString());
     }).finally(() => setLoading(false));
   }, []);
@@ -343,7 +385,7 @@ function DashboardTab({ isPremium }) {
       )}
       {display.map((g, i) => {
         const sportScores = scores[DASH_SPORTS.find(s => s.label === g.sportLabel)?.id] || [];
-        return <DashboardCard key={g.id || i} game={g} isPremium={isPremium} index={i} scoreData={sportScores} mlbLive={mlbLive} />;
+        return <DashboardCard key={g.id || i} game={g} isPremium={isPremium} index={i} scoreData={sportScores} mlbLive={mlbLive} movement={lineMovement[g.id]} />;
       })}
     </div>
   );
