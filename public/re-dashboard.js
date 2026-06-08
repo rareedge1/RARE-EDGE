@@ -94,10 +94,12 @@ function DashboardCard({ game, isPremium, index, scoreData, mlbLive }) {
   const hasEdge = proj?.hasEdge;
   const sportKey = game.sportLabel?.toLowerCase().replace("/", "_").replace(" ", "_") || "nfl";
 
-  // Auto-log edge calls to Supabase
+  // Auto-log edge calls to Supabase — today's games only
   useEffect(() => {
     if (!hasEdge || !isPremium) return;
     const today = new Date().toLocaleDateString("en-US", { timeZone: "America/Chicago" });
+    const gameDate = new Date(game.rawStart).toLocaleDateString("en-US", { timeZone: "America/Chicago" });
+    if (gameDate !== today) return;
     fetch("/api/edge-log", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
