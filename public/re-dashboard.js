@@ -116,9 +116,9 @@ function DashboardCard({ game, isPremium, index, scoreData, mlbLive, movement, e
   const hasEdge = proj?.hasEdge;
   const sportKey = game.sportLabel?.toLowerCase().replace("/", "_").replace(" ", "_") || "nfl";
 
-  // Auto-log edge calls to Supabase — today's games only
+  // Auto-log edge calls to Supabase — FINAL games only
   useEffect(() => {
-    if (!hasEdge || !isPremium) return;
+    if (!hasEdge || !isPremium || !isFinal) return;
     const today = new Date().toLocaleDateString("en-US", { timeZone: "America/Chicago" });
     const gameDate = new Date(game.rawStart).toLocaleDateString("en-US", { timeZone: "America/Chicago" });
     if (gameDate !== today) return;
