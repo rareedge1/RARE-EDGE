@@ -228,6 +228,22 @@ function RareEdge() {
     setShowSignup(true);
   };
 
+  const handleManageSubscription = async () => {
+    if (!user?.email) return;
+    try {
+      const r = await fetch("/api/portal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: user.email })
+      });
+      const data = await r.json();
+      if (data.url) window.location.href = data.url;
+      else alert("Could not open portal: " + (data.error || "Unknown error"));
+    } catch(e) {
+      alert("Error: " + e.message);
+    }
+  };
+
   const handleOnboardingDone = () => {
     setShowOnboarding(false);
     try { localStorage.setItem("re_onboarding_done", "true"); } catch {}
@@ -309,6 +325,16 @@ function RareEdge() {
                 <div style={{ fontSize:"11px", color:"#444" }}>Signed in as</div>
                 <div style={{ fontSize:"13px", color:"#777", marginTop:"2px", marginBottom:"4px" }}>{user.email}</div>
                 <div style={{ fontSize:"11px", color: isPremium ? "#c8f54a" : "#555", fontWeight:"600", marginBottom:"14px" }}>{isPremium ? "⚡ PREMIUM" : "FREE PLAN"}</div>
+                {isPremium && (
+                  <button onClick={handleManageSubscription} style={{ width:"100%", padding:"10px", background:"rgba(200,245,74,0.08)", border:"1px solid rgba(200,245,74,0.2)", borderRadius:"8px", color:"#c8f54a", fontSize:"13px", fontWeight:"600", cursor:"pointer", fontFamily:"inherit", marginBottom:"8px" }}>
+                    Manage Subscription
+                  </button>
+                )}
+                {!isPremium && (
+                  <button onClick={() => { setMenuOpen(false); startCheckout("monthly"); }} style={{ width:"100%", padding:"10px", background:"linear-gradient(135deg,#c8f54a,#8fdb00)", border:"none", borderRadius:"8px", color:"#000", fontSize:"13px", fontWeight:"700", cursor:"pointer", fontFamily:"inherit", marginBottom:"8px" }}>
+                    ⚡ Upgrade to Premium
+                  </button>
+                )}
                 <button onClick={handleLogout} style={{ width:"100%", padding:"10px", background:"rgba(255,77,77,0.08)", border:"1px solid rgba(255,77,77,0.2)", borderRadius:"8px", color:"#ff6b6b", fontSize:"13px", fontWeight:"600", cursor:"pointer", fontFamily:"inherit" }}>
                   Sign Out
                 </button>
