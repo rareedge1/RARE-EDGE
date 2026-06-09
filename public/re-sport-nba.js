@@ -1,14 +1,22 @@
 // ── NBA GAME CARD ─────────────────────────────────────────────
 function NBAGameCard({ game, liveNBA, isPremium, onSelect }) {
-  const sp = game.sportLabel?.toLowerCase();
-  const db = sp === "ncaab" ? NBA : NBA;
-
-  // Try live data first, fall back to static
   const getLiveTeam = (name) => {
-    if (!liveNBA || !Object.keys(liveNBA).length) return findTeam(name, NBA);
     const shortName = name?.split(" ").pop();
-    const liveEntry = liveNBA[shortName] || Object.entries(liveNBA).find(([k]) => name?.includes(k) || k.includes(shortName))?.[1];
-    if (liveEntry) return { ortg: liveEntry.ortg, drtg: liveEntry.drtg, pace: liveEntry.pace, last10: liveEntry.last10, netRtg: liveEntry.netRtg };
+    const liveEntry = liveNBA[shortName] ||
+      Object.entries(liveNBA).find(([k]) => name?.includes(k) || k.includes(shortName))?.[1];
+    if (liveEntry) {
+      // Use L10 to adjust ortg/drtg from static base
+      const base = findTeam(name, NBA) || { ortg:113, drtg:113, pace:98 };
+      const w = liveEntry.last10?.winsL10 ?? 5;
+      const ortgAdj = (w - 5) * 1.2;
+      const drtgAdj = (5 - w) * 1.2;
+      return {
+        ortg: base.ortg + ortgAdj,
+        drtg: base.drtg + drtgAdj,
+        pace: base.pace,
+        last10: liveEntry.last10,
+      };
+    }
     return findTeam(name, NBA);
   };
 
@@ -58,12 +66,12 @@ function NBAGameCard({ game, liveNBA, isPremium, onSelect }) {
         {/* Last 10 form */}
         {isPremium && (homeLast10 || awayLast10) && (
           <div style={{ display:"flex", gap:"6px", flexWrap:"wrap" }}>
-            {awayLast10 && (
+            {awayLast10 && (awayLast10.winsL10 + awayLast10.lossesL10 > 0) && (
               <div style={{ fontSize:"9px", color:"#555", background:"rgba(255,255,255,0.03)", padding:"3px 8px", borderRadius:"4px" }}>
                 {game.away?.split(" ").pop()} L10: <span style={{ color: awayLast10.winsL10 >= 7 ? "#c8f54a" : awayLast10.winsL10 <= 3 ? "#ef4444" : "#aaa" }}>{awayLast10.winsL10}-{awayLast10.lossesL10}</span>
               </div>
             )}
-            {homeLast10 && (
+            {homeLast10 && (homeLast10.winsL10 + homeLast10.lossesL10 > 0) && (
               <div style={{ fontSize:"9px", color:"#555", background:"rgba(255,255,255,0.03)", padding:"3px 8px", borderRadius:"4px" }}>
                 {game.home?.split(" ").pop()} L10: <span style={{ color: homeLast10.winsL10 >= 7 ? "#c8f54a" : homeLast10.winsL10 <= 3 ? "#ef4444" : "#aaa" }}>{homeLast10.winsL10}-{homeLast10.lossesL10}</span>
               </div>
@@ -301,10 +309,20 @@ function WNBATab({ isPremium }) {
                   {proj && !isPremium && <StatPill label="EDGE" val="🔒" />}
                 </div>
               </div>
-              {isPremium && (homeLive?.last10 || awayLive?.last10) && (
-                <div style={{ display:"flex", gap:"6px" }}>
-                  {awayLive?.last10 && <div style={{ fontSize:"9px", color:"#555", background:"rgba(255,255,255,0.03)", padding:"3px 8px", borderRadius:"4px" }}>{shortAway} L10: <span style={{ color: awayLive.last10.winsL10 >= 7 ? "#c8f54a" : awayLive.last10.winsL10 <= 3 ? "#ef4444" : "#aaa" }}>{awayLive.last10.winsL10}-{awayLive.last10.lossesL10}</span></div>}
-                  {homeLive?.last10 && <div style={{ fontSize:"9px", color:"#555", background:"rgba(255,255,255,0.03)", padding:"3px 8px", borderRadius:"4px" }}>{shortHome} L10: <span style={{ color: homeLive.last10.winsL10 >= 7 ? "#c8f54a" : homeLive.last10.winsL10 <= 3 ? "#ef4444" : "#aaa" }}>{homeLive.last10.winsL10}-{homeLive.last10.lossesL10}</span></div>}
+              {isPremium && (homeLive || awayLive) && (
+                <div style={{ display:"flex", gap:"6px", flexWrap:"wrap" }}>
+                  {awayLive && (awayLive.wins + awayLive.losses > 0) && (
+                    <div style={{ fontSize:"9px", color:"#555", background:"rgba(255,255,255,0.03)", padding:"3px 8px", borderRadius:"4px" }}>
+                      {shortAway} <span style={{ color: awayLive.winPct >= 0.6 ? "#c8f54a" : awayLive.winPct <= 0.4 ? "#ef4444" : "#aaa" }}>{awayLive.record}</span>
+                      {awayLive.streak && <span style={{ color:"#444", marginLeft:"4px" }}>{awayLive.streak}</span>}
+                    </div>
+                  )}
+                  {homeLive && (homeLive.wins + homeLive.losses > 0) && (
+                    <div style={{ fontSize:"9px", color:"#555", background:"rgba(255,255,255,0.03)", padding:"3px 8px", borderRadius:"4px" }}>
+                      {shortHome} <span style={{ color: homeLive.winPct >= 0.6 ? "#c8f54a" : homeLive.winPct <= 0.4 ? "#ef4444" : "#aaa" }}>{homeLive.record}</span>
+                      {homeLive.streak && <span style={{ color:"#444", marginLeft:"4px" }}>{homeLive.streak}</span>}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
