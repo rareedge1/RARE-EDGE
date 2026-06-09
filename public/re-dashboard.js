@@ -64,15 +64,16 @@ function EdgeTrackRecord() {
 function DashboardCard({ game, isPremium, index, scoreData, mlbLive, movement, eloRatings }) {
   const [open, setOpen] = useState(false);
 
-  const score = scoreData?.find(s =>
-    (s.home_team === game.home && s.away_team === game.away) ||
-    (s.home_team === game.away && s.away_team === game.home) ||
-    s.id === game.id
-  );
+  const score = scoreData?.find(s => {
+    if (s.id === game.id) return true;
+    const hMatch = s.home_team === game.home || s.home_team?.includes(game.home?.split(" ").pop()) || game.home?.includes(s.home_team?.split(" ").pop());
+    const aMatch = s.away_team === game.away || s.away_team?.includes(game.away?.split(" ").pop()) || game.away?.includes(s.away_team?.split(" ").pop());
+    return hMatch && aMatch;
+  });
   const isLive  = score?.completed === false && score?.scores?.length > 0;
-  const isFinal = score?.completed === true;
-  const homeScore = score?.scores?.find(s => s.name === game.home)?.score;
-  const awayScore = score?.scores?.find(s => s.name === game.away)?.score;
+  const isFinal = score?.completed === true || game.completed === true;
+  const homeScore = score?.scores?.find(s => s.name === game.home || game.home?.includes(s.name?.split(" ").pop()))?.score ?? game.scoreHome;
+  const awayScore = score?.scores?.find(s => s.name === game.away || game.away?.includes(s.name?.split(" ").pop()))?.score ?? game.scoreAway;
 
   const liveData = game.sportLabel?.toLowerCase() === "mlb"
     ? findMLBLiveData(game.home, game.away, mlbLive)
@@ -118,7 +119,7 @@ function DashboardCard({ game, isPremium, index, scoreData, mlbLive, movement, e
 
   // Auto-log edge calls to Supabase — FINAL games only
   useEffect(() => {
-    if (!hasEdge || !isPremium || !isFinal) return;
+    if (!hasEdge || !isPremium || !isFinal || !homeScore || !awayScore) return;
     const today = new Date().toLocaleDateString("en-US", { timeZone: "America/Chicago" });
     const gameDate = new Date(game.rawStart).toLocaleDateString("en-US", { timeZone: "America/Chicago" });
     if (gameDate !== today) return;
