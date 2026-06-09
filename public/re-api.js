@@ -144,3 +144,27 @@ async function fetchWNBALive() {
     return r.json();
   } catch(err) { return {}; }
 }
+
+// Fetch live MLB pitcher + team form data
+async function fetchMLBLive() {
+  try { const r = await fetch("/api/mlb"); if (!r.ok) return []; return r.json(); }
+  catch(err) { return []; }
+}
+
+// Fetch live NBA team stats
+async function fetchNBALive() {
+  try { const r = await fetch("/api/nba"); if (!r.ok) return {}; return r.json(); }
+  catch(err) { return {}; }
+}
+
+// Fetch live WNBA team stats
+async function fetchWNBALive() {
+  try { const r = await fetch("/api/wnba"); if (!r.ok) return {}; return r.json(); }
+  catch(err) { return {}; }
+}
+
+// Fetch live NFL team stats
+async function fetchNFLLive() {
+  try { const r = await fetch("/api/nfl"); if (!r.ok) return {}; return r.json(); }
+  catch(err) { return {}; }
+}
