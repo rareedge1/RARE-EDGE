@@ -7,22 +7,24 @@ export default async function handler(req, res) {
   if (!sport) return res.status(400).json({ error: "Sport required" });
 
   const KEY = process.env.ODDS_API_KEY || "99a28e26d9ca8efe2551318548dabc7d";
-  const url = `https://api.the-odds-api.com/v4/sports/${sport}/scores?apiKey=${KEY}&daysFrom=1`;
+  const url = `https://api.the-odds-api.com/v4/sports/${sport}/scores?apiKey=${KEY}&daysFrom=2`;
 
   try {
     const r = await fetch(url);
     if (!r.ok) return res.status(r.status).json({ error: `API error ${r.status}` });
     const data = await r.json();
 
-    // Filter to only games that started today in Central time
-    const todayStr = new Date().toLocaleDateString("en-US", { timeZone: "America/Chicago" });
-    const todayOnly = data.filter(g => {
+    // Filter to today and yesterday only in Central time
+    const todayStr     = new Date().toLocaleDateString("en-US", { timeZone: "America/Chicago" });
+    const yesterday    = new Date(); yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toLocaleDateString("en-US", { timeZone: "America/Chicago" });
+    const filtered = data.filter(g => {
       const gStr = new Date(g.commence_time).toLocaleDateString("en-US", { timeZone: "America/Chicago" });
-      return gStr === todayStr;
+      return gStr === todayStr || gStr === yesterdayStr;
     });
 
     res.setHeader("Cache-Control", "s-maxage=300");
-    return res.status(200).json(todayOnly);
+    return res.status(200).json(filtered);
   } catch(e) {
     return res.status(500).json({ error: e.message });
   }
