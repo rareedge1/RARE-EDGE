@@ -291,6 +291,7 @@ function DashboardTab({ isPremium }) {
   const [lineMovement, setLineMovement] = useState({});
   const [eloRatings, setEloRatings]     = useState({});
   const [clvData, setClvData]           = useState(null);
+  const [oddsGames, setOddsGames]       = useState([]);
 
   // Fetch scores every 5 minutes
   useEffect(() => {
@@ -307,6 +308,39 @@ function DashboardTab({ isPremium }) {
     const interval = setInterval(fetchAllScores, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
+
+  // Merge odds + scores whenever either changes
+  useEffect(() => {
+    const tz = "America/Chicago";
+    const todayStr     = new Date().toLocaleDateString("en-US", { timeZone: tz });
+    const yestDate     = new Date(); yestDate.setDate(yestDate.getDate() - 1);
+    const yesterdayStr = yestDate.toLocaleDateString("en-US", { timeZone: tz });
+    const allScores = Object.values(scores).flat();
+    const scored = allScores
+      .filter(s => s.completed)
+      .filter(s => {
+        const gStr = new Date(s.commence_time).toLocaleDateString("en-US", { timeZone: tz });
+        return gStr === todayStr || gStr === yesterdayStr;
+      })
+      .filter(s => !oddsGames.some(g =>
+        (g.home === s.home_team && g.away === s.away_team) ||
+        (g.home?.includes(s.home_team?.split(" ").pop()) && g.away?.includes(s.away_team?.split(" ").pop()))
+      ))
+      .map(s => ({
+        id: s.id,
+        home: s.home_team,
+        away: s.away_team,
+        rawStart: s.commence_time,
+        time: new Date(s.commence_time).toLocaleString("en-US", { timeZone: tz }),
+        sportLabel: DASH_SPORTS.find(d => (scores[d.id] || []).some(x => x.id === s.id))?.label || "MLB",
+        completed: true,
+        scoreHome: s.scores?.find(x => x.name === s.home_team)?.score,
+        scoreAway: s.scores?.find(x => x.name === s.away_team)?.score,
+      }));
+    if (oddsGames.length > 0 || scored.length > 0) {
+      setAllGames([...oddsGames, ...scored]);
+    }
+  }, [oddsGames, scores]);
 
   // Fetch live MLB data once
   useEffect(() => {
@@ -352,31 +386,8 @@ function DashboardTab({ isPremium }) {
           .catch(() => [])
       )
     ).then(results => {
-      const oddsGames = results.flat();
-      const allScores = Object.values(scores).flat();
-      const tz = "America/Chicago";
-      const todayStr     = new Date().toLocaleDateString("en-US", { timeZone: tz });
-      const yestDate     = new Date(); yestDate.setDate(yestDate.getDate() - 1);
-      const yesterdayStr = yestDate.toLocaleDateString("en-US", { timeZone: tz });
-      const scored = allScores
-        .filter(s => s.completed)
-        .filter(s => {
-          const gStr = new Date(s.commence_time).toLocaleDateString("en-US", { timeZone: tz });
-          return gStr === todayStr || gStr === yesterdayStr;
-        })
-        .filter(s => !oddsGames.some(g => g.home === s.home_team && g.away === s.away_team))
-        .map(s => ({
-          id: s.id,
-          home: s.home_team,
-          away: s.away_team,
-          rawStart: s.commence_time,
-          time: new Date(s.commence_time).toLocaleString("en-US", { timeZone: "America/Chicago" }),
-          sportLabel: DASH_SPORTS.find(d => (scores[d.id] || []).some(x => x.id === s.id))?.label || "MLB",
-          completed: true,
-          scoreHome: s.scores?.find(x => x.name === s.home_team)?.score,
-          scoreAway: s.scores?.find(x => x.name === s.away_team)?.score,
-        }));
-      setAllGames([...oddsGames, ...scored]);
+      const games = results.flat();
+      setOddsGames(games);
       // Save line snapshots for movement tracking
       if (oddsGames.length > 0) {
         fetch("/api/line-movement", {
