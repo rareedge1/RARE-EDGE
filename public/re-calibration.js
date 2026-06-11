@@ -21,7 +21,7 @@ function CalibrationDashboard({ isPremium }) {
 
   if (loading) return <div style={{ textAlign:"center", padding:"40px", color:"#444" }}>Loading calibration data...</div>;
   if (error)   return <div style={{ textAlign:"center", padding:"40px", color:"#ef4444" }}>Error: {error}</div>;
-  if (!data || data.total === 0) return (
+  if (!data || !data.total || data.total === 0) return (
     <div style={{ textAlign:"center", padding:"40px 20px" }}>
       <div style={{ fontSize:"32px", marginBottom:"12px" }}>📊</div>
       <div style={{ fontSize:"14px", color:"#555" }}>Not enough resolved edge calls yet.</div>
