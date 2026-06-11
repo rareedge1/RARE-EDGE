@@ -268,6 +268,7 @@ function RareEdge() {
     { id:"golf",             label:"Golf",            emoji:"⛳" },
     { id:"tennis",           label:"Tennis",          emoji:"🎾" },
     { id:"mma",              label:"MMA/UFC",         emoji:"🥊" },
+    { id:"calibration",       label:"Calibration",      emoji:"📊" },
   ];
 
   const activeInfo = tabs.find(t => t.id === activeTab);
@@ -374,6 +375,7 @@ function RareEdge() {
         {activeTab === "golf"             && <GolfTab             isPremium={isPremium} />}
         {activeTab === "tennis"           && <TennisTab           isPremium={isPremium} />}
         {activeTab === "mma"              && <MMATab              isPremium={isPremium} />}
+        {activeTab === "calibration"       && <CalibrationDashboard isPremium={isPremium} />}
       </div>
     </div>
   );
