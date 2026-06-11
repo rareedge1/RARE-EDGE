@@ -278,7 +278,9 @@ const DASH_SPORTS = [
 
 function DashboardTab({ isPremium }) {
   const today = new Date();
-  const dates = Array.from({ length:4 }, (_, i) => { const d = new Date(today); d.setDate(d.getDate() + i); return d; });
+  const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
+  // dates: yesterday + today + next 3 days
+  const dates = [-1, 0, 1, 2, 3].map(i => { const d = new Date(today); d.setDate(d.getDate() + i); return d; });
   const [selectedDate, setSelectedDate] = useState(today);
   const [allGames, setAllGames]         = useState([]);
   const [scores, setScores]             = useState({});
@@ -352,8 +354,16 @@ function DashboardTab({ isPremium }) {
     ).then(results => {
       const oddsGames = results.flat();
       const allScores = Object.values(scores).flat();
+      const tz = "America/Chicago";
+      const todayStr     = new Date().toLocaleDateString("en-US", { timeZone: tz });
+      const yestDate     = new Date(); yestDate.setDate(yestDate.getDate() - 1);
+      const yesterdayStr = yestDate.toLocaleDateString("en-US", { timeZone: tz });
       const scored = allScores
         .filter(s => s.completed)
+        .filter(s => {
+          const gStr = new Date(s.commence_time).toLocaleDateString("en-US", { timeZone: tz });
+          return gStr === todayStr || gStr === yesterdayStr;
+        })
         .filter(s => !oddsGames.some(g => g.home === s.home_team && g.away === s.away_team))
         .map(s => ({
           id: s.id,
@@ -406,6 +416,7 @@ function DashboardTab({ isPremium }) {
 
   const fmtDate = d => d.toLocaleDateString("en-US", { weekday:"short", month:"short", day:"numeric" });
   const isToday = d => d.toDateString() === today.toDateString();
+  const isYesterday = d => d.toDateString() === yesterday.toDateString();
 
   return (
     <div>
@@ -416,7 +427,7 @@ function DashboardTab({ isPremium }) {
       <div style={{ display:"flex", gap:"8px", marginBottom:"16px", overflowX:"auto", paddingBottom:"4px" }}>
         {dates.map((d, i) => (
           <button key={i} onClick={() => setSelectedDate(d)} style={{ padding:"8px 16px", borderRadius:"20px", border:"none", cursor:"pointer", whiteSpace:"nowrap", fontFamily:"inherit", fontSize:"12px", fontWeight:"600", background: d.toDateString() === selectedDate.toDateString() ? "#c8f54a" : "rgba(255,255,255,0.05)", color: d.toDateString() === selectedDate.toDateString() ? "#000" : "#555" }}>
-            {isToday(d) ? "Today" : fmtDate(d)}
+            {isToday(d) ? "Today" : d.toDateString() === yesterday.toDateString() ? "Yesterday" : fmtDate(d)}
           </button>
         ))}
       </div>
