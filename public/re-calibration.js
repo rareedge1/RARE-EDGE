@@ -37,12 +37,8 @@ function ROICalculator({ wins, losses, pushes }) {
 }
 
 function CalibrationDashboard({ isPremium }) {
-  var state = useState(null);
-  var data = state[0];
-  var setData = state[1];
-  var loadState = useState(true);
-  var loading = loadState[0];
-  var setLoading = loadState[1];
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(function() {
     fetch("/api/calibration")
