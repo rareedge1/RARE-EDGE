@@ -62,7 +62,7 @@ function CalibrationDashboard({ isPremium }) {
 
   if (loading) return <div style={{ textAlign:"center", padding:"40px", color:"#444" }}>Loading...</div>;
   if (error)   return <div style={{ textAlign:"center", padding:"40px", color:"#ef4444" }}>Error: {error}</div>;
-  if (!data || !data.total || data.total === 0) return (
+  if (!data || !safeData.total || safeData.total === 0) return (
     <div style={{ textAlign:"center", padding:"40px 20px" }}>
       <div style={{ fontSize:"32px", marginBottom:"12px" }}>📊</div>
       <div style={{ fontSize:"14px", color:"#777" }}>Not enough resolved edge calls yet.</div>
@@ -70,8 +70,18 @@ function CalibrationDashboard({ isPremium }) {
     </div>
   );
 
-  const gradeColor = data.hitRate >= 58 ? "#c8f54a" : data.hitRate >= 54 ? "#60a5fa" : data.hitRate >= 50 ? "#aaa" : "#ef4444";
-  const gradeLabel = data.total < 50 ? "BUILDING" : data.hitRate >= 58 ? "SHARP" : data.hitRate >= 54 ? "GOOD" : data.hitRate >= 50 ? "NEUTRAL" : "NEEDS WORK";
+  if (!data || typeof data !== "object") return <div style={{ padding:"40px", textAlign:"center", color:"#444" }}>No data available.</div>;
+  const safeData = {
+    total: safeData.total || 0,
+    wins: safeData.wins || 0,
+    losses: safeData.losses || 0,
+    pushes: safeData.pushes || 0,
+    hitRate: safeData.hitRate || 0,
+    sportStats: Array.isArray(safeData.sportStats) ? safeData.sportStats : [],
+    edgeStats: Array.isArray(safeData.edgeStats) ? safeData.edgeStats : [],
+  };
+  const gradeColor = safeData.hitRate >= 58 ? "#c8f54a" : safeData.hitRate >= 54 ? "#60a5fa" : safeData.hitRate >= 50 ? "#aaa" : "#ef4444";
+  const gradeLabel = safeData.total < 50 ? "BUILDING" : safeData.hitRate >= 58 ? "SHARP" : safeData.hitRate >= 54 ? "GOOD" : safeData.hitRate >= 50 ? "NEUTRAL" : "NEEDS WORK";
 
   return (
     <div>
@@ -81,37 +91,37 @@ function CalibrationDashboard({ isPremium }) {
       <div style={{ background:"rgba(255,255,255,0.02)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:"12px", padding:"16px", marginBottom:"16px", textAlign:"center" }}>
         <div style={{ fontSize:"10px", color:"#444", letterSpacing:"2px", marginBottom:"8px" }}>MODEL GRADE</div>
         <div style={{ fontFamily:"'Bebas Neue',cursive", fontSize:"36px", color: gradeColor, letterSpacing:"2px" }}>{gradeLabel}</div>
-        <div style={{ fontSize:"11px", color:"#555", marginTop:"4px" }}>{data.total} resolved calls · {data.hitRate}% hit rate</div>
+        <div style={{ fontSize:"11px", color:"#555", marginTop:"4px" }}>{safeData.total} resolved calls · {safeData.hitRate}% hit rate</div>
       </div>
 
       {/* Stats grid */}
       <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:"8px", marginBottom:"16px" }}>
         <div style={{ background:"rgba(200,245,74,0.06)", borderRadius:"10px", padding:"12px", textAlign:"center" }}>
-          <div style={{ fontFamily:"'Bebas Neue',cursive", fontSize:"28px", color:"#c8f54a", lineHeight:1 }}>{data.wins}</div>
+          <div style={{ fontFamily:"'Bebas Neue',cursive", fontSize:"28px", color:"#c8f54a", lineHeight:1 }}>{safeData.wins}</div>
           <div style={{ fontSize:"9px", color:"#555", marginTop:"2px" }}>WINS</div>
         </div>
         <div style={{ background:"rgba(239,68,68,0.06)", borderRadius:"10px", padding:"12px", textAlign:"center" }}>
-          <div style={{ fontFamily:"'Bebas Neue',cursive", fontSize:"28px", color:"#ef4444", lineHeight:1 }}>{data.losses}</div>
+          <div style={{ fontFamily:"'Bebas Neue',cursive", fontSize:"28px", color:"#ef4444", lineHeight:1 }}>{safeData.losses}</div>
           <div style={{ fontSize:"9px", color:"#555", marginTop:"2px" }}>LOSSES</div>
         </div>
         <div style={{ background:"rgba(255,255,255,0.03)", borderRadius:"10px", padding:"12px", textAlign:"center" }}>
-          <div style={{ fontFamily:"'Bebas Neue',cursive", fontSize:"28px", color:"#aaa", lineHeight:1 }}>{data.pushes}</div>
+          <div style={{ fontFamily:"'Bebas Neue',cursive", fontSize:"28px", color:"#aaa", lineHeight:1 }}>{safeData.pushes}</div>
           <div style={{ fontSize:"9px", color:"#555", marginTop:"2px" }}>PUSHES</div>
         </div>
         <div style={{ background:"rgba(255,255,255,0.03)", borderRadius:"10px", padding:"12px", textAlign:"center" }}>
-          <div style={{ fontFamily:"'Bebas Neue',cursive", fontSize:"28px", color: gradeColor, lineHeight:1 }}>{data.hitRate}%</div>
+          <div style={{ fontFamily:"'Bebas Neue',cursive", fontSize:"28px", color: gradeColor, lineHeight:1 }}>{safeData.hitRate}%</div>
           <div style={{ fontSize:"9px", color:"#555", marginTop:"2px" }}>HIT RATE</div>
         </div>
       </div>
 
       {/* ROI Calculator */}
-      <ROICalculator wins={data.wins} losses={data.losses} pushes={data.pushes} />
+      <ROICalculator wins={safeData.wins} losses={safeData.losses} pushes={safeData.pushes} />
 
       {/* By sport */}
-      {data.sportStats && data.sportStats.length > 0 && (
+      {safeData.sportStats && safeData.sportStats.length > 0 && (
         <div style={{ background:"rgba(255,255,255,0.02)", border:"1px solid rgba(255,255,255,0.07)", borderRadius:"12px", padding:"14px", marginBottom:"16px" }}>
           <div style={{ fontSize:"10px", color:"#555", letterSpacing:"2px", marginBottom:"10px" }}>BY SPORT</div>
-          {data.sportStats.map(function(s, i) {
+          {safeData.sportStats.map(function(s, i) {
             var sportRate = s.hitRate;
             var sportColor = sportRate >= 55 ? "#c8f54a" : sportRate >= 50 ? "#aaa" : "#ef4444";
             return (
@@ -132,13 +142,13 @@ function CalibrationDashboard({ isPremium }) {
       )}
 
       {/* By edge size */}
-      {data.edgeStats && data.edgeStats.length > 0 && (
+      {safeData.edgeStats && safeData.edgeStats.length > 0 && (
         <div style={{ background:"rgba(255,255,255,0.02)", border:"1px solid rgba(255,255,255,0.07)", borderRadius:"12px", padding:"14px", marginBottom:"16px" }}>
           <div style={{ fontSize:"10px", color:"#555", letterSpacing:"2px", marginBottom:"10px" }}>BY EDGE SIZE</div>
-          {data.edgeStats.map(function(e, i) {
+          {safeData.edgeStats.map(function(e, i) {
             var edgeColor = e.hitRate >= 55 ? "#c8f54a" : e.hitRate >= 50 ? "#aaa" : e.hitRate !== null ? "#ef4444" : "#333";
             return (
-              <div key={i} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"8px 0", borderBottom: i < data.edgeStats.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none" }}>
+              <div key={i} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"8px 0", borderBottom: i < safeData.edgeStats.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none" }}>
                 <div>
                   <div style={{ fontSize:"12px", color:"#aaa" }}>Edge {e.bucket}</div>
                   <div style={{ fontSize:"10px", color:"#444" }}>{e.total} calls</div>
@@ -156,10 +166,10 @@ function CalibrationDashboard({ isPremium }) {
       {/* What this means */}
       <div style={{ background:"rgba(200,245,74,0.03)", border:"1px solid rgba(200,245,74,0.10)", borderRadius:"12px", padding:"14px" }}>
         <div style={{ fontSize:"10px", color:"#c8f54a", letterSpacing:"2px", marginBottom:"8px" }}>🎯 WHAT THIS MEANS</div>
-        {data.total < 50 && <div style={{ fontSize:"12px", color:"#555", lineHeight:"1.7" }}>Need {50 - data.total} more resolved calls for full statistical confidence. Model is actively learning.</div>}
-        {data.total >= 50 && data.hitRate >= 55 && <div style={{ fontSize:"12px", color:"#aaa", lineHeight:"1.7" }}>Model is performing well. Focus on marketing and growing the user base.</div>}
-        {data.total >= 50 && data.hitRate >= 50 && data.hitRate < 55 && <div style={{ fontSize:"12px", color:"#aaa", lineHeight:"1.7" }}>Near breakeven. Check which sports are underperforming.</div>}
-        {data.total >= 50 && data.hitRate < 50 && <div style={{ fontSize:"12px", color:"#ef4444", lineHeight:"1.7" }}>Model needs calibration. Review sport-by-sport breakdown.</div>}
+        {safeData.total < 50 && <div style={{ fontSize:"12px", color:"#555", lineHeight:"1.7" }}>Need {50 - safeData.total} more resolved calls for full statistical confidence. Model is actively learning.</div>}
+        {safeData.total >= 50 && safeData.hitRate >= 55 && <div style={{ fontSize:"12px", color:"#aaa", lineHeight:"1.7" }}>Model is performing well. Focus on marketing and growing the user base.</div>}
+        {safeData.total >= 50 && safeData.hitRate >= 50 && safeData.hitRate < 55 && <div style={{ fontSize:"12px", color:"#aaa", lineHeight:"1.7" }}>Near breakeven. Check which sports are underperforming.</div>}
+        {safeData.total >= 50 && safeData.hitRate < 50 && <div style={{ fontSize:"12px", color:"#ef4444", lineHeight:"1.7" }}>Model needs calibration. Review sport-by-sport breakdown.</div>}
       </div>
     </div>
   );
