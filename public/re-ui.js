@@ -77,27 +77,34 @@ function getPlayers(teamName, sport) {
 }
 
 // Format player props lines by sport
-function formatPlayerLines(player, sport) {
+// isLive=true means stats is a live object from API, false means static player object
+function formatPlayerLines(player, sport, isLive = false) {
   const lines = [];
+  const s = isLive ? player : player; // same object either way
   if (sport === "nba" || sport === "wnba" || sport === "ncaab") {
-    if (player.pts != null) lines.push({ stat:"PTS", proj: player.pts });
-    if (player.reb != null) lines.push({ stat:"REB", proj: player.reb });
-    if (player.ast != null) lines.push({ stat:"AST", proj: player.ast });
+    if (s.pts != null && parseFloat(s.pts) > 0) lines.push({ stat:"PTS", proj: s.pts });
+    if (s.reb != null && parseFloat(s.reb) > 0) lines.push({ stat:"REB", proj: s.reb });
+    if (s.ast != null && parseFloat(s.ast) > 0) lines.push({ stat:"AST", proj: s.ast });
+    if (s.stl != null && parseFloat(s.stl) > 0) lines.push({ stat:"STL", proj: s.stl });
   } else if (sport === "nfl" || sport === "ncaaf") {
-    if (player.pyds != null) lines.push({ stat:"PASS YDS", proj: player.pyds });
-    if (player.ptds != null) lines.push({ stat:"PASS TDS", proj: player.ptds });
-    if (player.ryds != null) lines.push({ stat:"RUSH YDS", proj: player.ryds });
-    if (player.ryds_r != null) lines.push({ stat:"REC YDS", proj: player.ryds_r });
-    if (player.rec  != null) lines.push({ stat:"REC", proj: player.rec });
+    if (s.pyds != null && parseFloat(s.pyds) > 0)   lines.push({ stat:"PASS YDS", proj: s.pyds });
+    if (s.ptds != null && parseFloat(s.ptds) > 0)   lines.push({ stat:"PASS TDS", proj: s.ptds });
+    if (s.ryds != null && parseFloat(s.ryds) > 0)   lines.push({ stat:"RUSH YDS", proj: s.ryds });
+    if (s.ryds_r != null && parseFloat(s.ryds_r) > 0) lines.push({ stat:"REC YDS", proj: s.ryds_r });
+    if (s.rec != null && parseFloat(s.rec) > 0)     lines.push({ stat:"REC", proj: s.rec });
+    if (s.tds != null && parseFloat(s.tds) > 0)     lines.push({ stat:"TDS", proj: s.tds });
   } else if (sport === "mlb") {
-    if (player.hr  != null) lines.push({ stat:"HR",   proj: player.hr });
-    if (player.rbi != null) lines.push({ stat:"RBI",  proj: player.rbi });
-    if (player.avg != null) lines.push({ stat:"AVG",  proj: player.avg });
-    if (player.so  != null) lines.push({ stat:"K's",  proj: player.so });
+    if (s.avg != null && parseFloat(s.avg) > 0) lines.push({ stat:"AVG",  proj: s.avg });
+    if (s.hr  != null && parseFloat(s.hr)  > 0) lines.push({ stat:"HR",   proj: s.hr  });
+    if (s.rbi != null && parseFloat(s.rbi) > 0) lines.push({ stat:"RBI",  proj: s.rbi });
+    if (s.ops != null && parseFloat(s.ops) > 0) lines.push({ stat:"OPS",  proj: s.ops });
+    if (s.era != null && parseFloat(s.era) > 0) lines.push({ stat:"ERA",  proj: s.era });
+    if (s.so  != null && parseFloat(s.so)  > 0) lines.push({ stat:"K's",  proj: s.so  });
   } else if (sport === "nhl") {
-    if (player.g   != null) lines.push({ stat:"GOALS", proj: player.g.toFixed(2) });
-    if (player.a   != null) lines.push({ stat:"ASST",  proj: player.a.toFixed(2) });
-    if (player.sog != null) lines.push({ stat:"SOG",   proj: player.sog.toFixed(1) });
+    if (s.g   != null && parseFloat(s.g)   > 0) lines.push({ stat:"GOALS", proj: s.g   });
+    if (s.a   != null && parseFloat(s.a)   > 0) lines.push({ stat:"ASST",  proj: s.a   });
+    if (s.pts != null && parseFloat(s.pts) > 0) lines.push({ stat:"PTS",   proj: s.pts });
+    if (s.sog != null && parseFloat(s.sog) > 0) lines.push({ stat:"SOG",   proj: s.sog });
   }
   return lines;
 }
@@ -113,15 +120,51 @@ function GameDetailModal({ game, sport, isPremium, onClose }) {
   }, []);
 
   useEffect(() => {
-    const hp = getPlayers(game.home, sport);
-    const ap = getPlayers(game.away, sport);
-    const format = (players, teamName) => players.map(p => ({
-      name: p.n || p.name,
-      team: teamName,
-      rec: "PROJ",
-      lines: formatPlayerLines(p, sport),
-    }));
-    setPlayers([...format(ap, game.away), ...format(hp, game.home)]);
+    // Try live API first, fall back to static database
+    const liveSupported = ["nba","wnba","nfl","nhl","mlb"].includes(sport);
+    if (liveSupported) {
+      const homeShort = game.home?.split(" ").pop();
+      const awayShort = game.away?.split(" ").pop();
+      Promise.all([
+        fetch(`/api/players?sport=${sport}&team=${encodeURIComponent(homeShort)}`).then(r => r.json()).catch(() => null),
+        fetch(`/api/players?sport=${sport}&team=${encodeURIComponent(awayShort)}`).then(r => r.json()).catch(() => null),
+      ]).then(([homeData, awayData]) => {
+        const formatLive = (data, teamName) => {
+          if (!data?.players?.length) return [];
+          return data.players.slice(0, 5).map(p => ({
+            name: p.name,
+            team: teamName,
+            rec: p.injured ? "⚠️ " + p.status : "LIVE",
+            injured: p.injured,
+            lines: formatPlayerLines(p.stats || {}, sport, true),
+          }));
+        };
+        const livePlayers = [
+          ...formatLive(awayData, game.away),
+          ...formatLive(homeData, game.home),
+        ];
+        if (livePlayers.length > 0) {
+          setPlayers(livePlayers);
+        } else {
+          // Fall back to static
+          const hp = getPlayers(game.home, sport);
+          const ap = getPlayers(game.away, sport);
+          const format = (players, teamName) => players.map(p => ({
+            name: p.n || p.name, team: teamName, rec: "PROJ",
+            lines: formatPlayerLines(p, sport, false),
+          }));
+          setPlayers([...format(ap, game.away), ...format(hp, game.home)]);
+        }
+      });
+    } else {
+      const hp = getPlayers(game.home, sport);
+      const ap = getPlayers(game.away, sport);
+      const format = (players, teamName) => players.map(p => ({
+        name: p.n || p.name, team: teamName, rec: "PROJ",
+        lines: formatPlayerLines(p, sport, false),
+      }));
+      setPlayers([...format(ap, game.away), ...format(hp, game.home)]);
+    }
   }, [game, sport]);
 
   // Project based on sport
@@ -269,7 +312,7 @@ function GameDetailModal({ game, sport, isPremium, onClose }) {
                       <div style={{ fontSize:"13px", color:"#ccc", fontWeight:"600" }}>{p.name}</div>
                       <div style={{ fontSize:"10px", color:"#444" }}>{p.team}</div>
                     </div>
-                    <div style={{ background:"rgba(200,245,74,0.1)", borderRadius:"10px", padding:"2px 10px", fontSize:"10px", color:"#c8f54a", fontWeight:"700" }}>REC: {p.rec}</div>
+                    <div style={{ background: p.injured ? "rgba(239,68,68,0.1)" : "rgba(200,245,74,0.1)", borderRadius:"10px", padding:"2px 10px", fontSize:"10px", color: p.injured ? "#ef4444" : "#c8f54a", fontWeight:"700" }}>{p.rec}</div>
                   </div>
                   <div style={{ display:"flex", gap:"8px", flexWrap:"wrap" }}>
                     {p.lines.map((l, li) => (
