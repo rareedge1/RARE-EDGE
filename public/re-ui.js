@@ -59,6 +59,49 @@ function LiveGamesStrip({ sportId, sportLabel, onGameSelect }) {
   );
 }
 
+// Get players for a team from PLAYERS database with flexible name matching
+function getPlayers(teamName, sport) {
+  if (!teamName || !PLAYERS) return [];
+  // Try exact match first
+  if (PLAYERS[teamName]) return PLAYERS[teamName];
+  // Try short name (last word)
+  const short = teamName.split(" ").pop();
+  if (PLAYERS[short]) return PLAYERS[short];
+  // Try partial match
+  const match = Object.entries(PLAYERS).find(([k]) =>
+    k.toLowerCase().includes(short.toLowerCase()) ||
+    short.toLowerCase().includes(k.toLowerCase()) ||
+    teamName.toLowerCase().includes(k.toLowerCase())
+  );
+  return match ? match[1] : [];
+}
+
+// Format player props lines by sport
+function formatPlayerLines(player, sport) {
+  const lines = [];
+  if (sport === "nba" || sport === "wnba" || sport === "ncaab") {
+    if (player.pts != null) lines.push({ stat:"PTS", proj: player.pts });
+    if (player.reb != null) lines.push({ stat:"REB", proj: player.reb });
+    if (player.ast != null) lines.push({ stat:"AST", proj: player.ast });
+  } else if (sport === "nfl" || sport === "ncaaf") {
+    if (player.pyds != null) lines.push({ stat:"PASS YDS", proj: player.pyds });
+    if (player.ptds != null) lines.push({ stat:"PASS TDS", proj: player.ptds });
+    if (player.ryds != null) lines.push({ stat:"RUSH YDS", proj: player.ryds });
+    if (player.ryds_r != null) lines.push({ stat:"REC YDS", proj: player.ryds_r });
+    if (player.rec  != null) lines.push({ stat:"REC", proj: player.rec });
+  } else if (sport === "mlb") {
+    if (player.hr  != null) lines.push({ stat:"HR",   proj: player.hr });
+    if (player.rbi != null) lines.push({ stat:"RBI",  proj: player.rbi });
+    if (player.avg != null) lines.push({ stat:"AVG",  proj: player.avg });
+    if (player.so  != null) lines.push({ stat:"K's",  proj: player.so });
+  } else if (sport === "nhl") {
+    if (player.g   != null) lines.push({ stat:"GOALS", proj: player.g.toFixed(2) });
+    if (player.a   != null) lines.push({ stat:"ASST",  proj: player.a.toFixed(2) });
+    if (player.sog != null) lines.push({ stat:"SOG",   proj: player.sog.toFixed(1) });
+  }
+  return lines;
+}
+
 // Game Detail Modal — slides up from bottom
 function GameDetailModal({ game, sport, isPremium, onClose }) {
   const [tab, setTab] = useState("overview");
@@ -72,10 +115,13 @@ function GameDetailModal({ game, sport, isPremium, onClose }) {
   useEffect(() => {
     const hp = getPlayers(game.home, sport);
     const ap = getPlayers(game.away, sport);
-    setPlayers([
-      ...(ap.map(p => ({ ...p, team: game.away }))),
-      ...(hp.map(p => ({ ...p, team: game.home }))),
-    ]);
+    const format = (players, teamName) => players.map(p => ({
+      name: p.n || p.name,
+      team: teamName,
+      rec: "PROJ",
+      lines: formatPlayerLines(p, sport),
+    }));
+    setPlayers([...format(ap, game.away), ...format(hp, game.home)]);
   }, [game, sport]);
 
   // Project based on sport
