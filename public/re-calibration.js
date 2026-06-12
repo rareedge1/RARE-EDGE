@@ -120,7 +120,7 @@ function CalibrationDashboard({ isPremium }) {
       <div style={{ fontSize:"10px", color:"#555", letterSpacing:"2px", textTransform:"uppercase", marginBottom:"16px" }}>📊 Model Calibration</div>
 
       {/* Overall grade */}
-      <div style={{ background:"rgba(255,255,255,0.02)", border:`1px solid ${data.gradeColor}44`, borderRadius:"12px", padding:"16px", marginBottom:"16px", textAlign:"center" }}>
+      <div style={{ background:"rgba(255,255,255,0.02)", border:"1px solid rgba(255,255,255,0.10)", borderRadius:"12px", padding:"16px", marginBottom:"16px", textAlign:"center" }}>
         <div style={{ fontSize:"10px", color:"#444", letterSpacing:"2px", marginBottom:"8px" }}>MODEL GRADE</div>
         <div style={{ fontFamily:"'Bebas Neue',cursive", fontSize:"36px", color: data.gradeColor, letterSpacing:"2px" }}>{data.grade}</div>
         <div style={{ fontSize:"11px", color:"#444", marginTop:"4px" }}>Based on {data.total} resolved edge calls</div>
