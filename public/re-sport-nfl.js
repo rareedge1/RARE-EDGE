@@ -71,6 +71,7 @@ function NFLTab({ isPremium }) {
   const [games, setGames]       = useState([]);
   const [liveNFL, setLiveNFL]   = useState({});
   const [eloRatings, setEloRatings] = useState({});
+  const [restDays, setRestDays] = useState({});
   const [loading, setLoading]   = useState(true);
   const [selectedGame, setSelectedGame] = useState(null);
   const [weather, setWeather]   = useState(null);
@@ -92,10 +93,12 @@ function NFLTab({ isPremium }) {
         .catch(() => []),
       fetch("/api/nfl").then(r => r.json()).catch(() => ({})),
       fetch("/api/elo").then(r => r.json()).catch(() => ({})),
-    ]).then(([oddsGames, nflData, eloData]) => {
+      fetch("/api/rest-days?sport=nfl").then(r => r.json()).catch(() => ({})),
+    ]).then(([oddsGames, nflData, eloData, restData]) => {
       setGames(oddsGames);
       setLiveNFL(nflData || {});
       setEloRatings(eloData || {});
+      setRestDays(restData || {});
     }).finally(() => setLoading(false));
   }, []);
 
@@ -116,9 +119,16 @@ function NFLTab({ isPremium }) {
     const baseA = NFL[away];
     if (!base || !baseA) return;
 
-    // Rest day adjustment: short week = -2.0 pts offense
-    const restAdj = ((restHome - 7) - (restAway - 7)) * 0.3;
-    // Weather total adjustment
+    // Auto rest days from schedule, fall back to manual selection
+    const homeShort = home?.split(" ").pop();
+    const awayShort = away?.split(" ").pop();
+    const autoHomeRest = restDays[homeShort]?.daysSinceLastGame;
+    const autoAwayRest = restDays[awayShort]?.daysSinceLastGame;
+    const effectiveHomeRest = autoHomeRest ?? restHome;
+    const effectiveAwayRest = autoAwayRest ?? restAway;
+
+    // Rest day adjustment: short week = penalty
+    const restAdj = ((effectiveHomeRest - 7) - (effectiveAwayRest - 7)) * 0.3;
     const weatherAdj = weather?.totalAdj || 0;
 
     const proj = projectFootball(base, baseA, spread, parseFloat(total) + weatherAdj, {
@@ -126,8 +136,9 @@ function NFLTab({ isPremium }) {
       restAdj,
       homeML: null, awayML: null,
     });
-    if (proj && weather?.totalAdj) {
-      proj.weatherNote = `Weather adj: ${weatherAdj > 0 ? "+" : ""}${weatherAdj} pts (${weather.temp}°F, ${weather.wind}mph wind)`;
+    if (proj) {
+      if (weather?.totalAdj) proj.weatherNote = `Weather adj: ${weatherAdj > 0 ? "+" : ""}${weatherAdj} pts (${weather.temp}°F, ${weather.wind}mph wind)`;
+      if (autoHomeRest || autoAwayRest) proj.restNote = `Rest: ${awayShort} ${effectiveAwayRest}d · ${homeShort} ${effectiveHomeRest}d`;
     }
     setResult(proj);
   };
@@ -178,25 +189,33 @@ function NFLTab({ isPremium }) {
           </div>
         </div>
 
-        {/* Rest days */}
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"10px", marginBottom:"10px" }}>
-          <div>
-            <label style={S.lbl}>Away Rest Days</label>
-            <select style={S.sel} value={restAway} onChange={e => setRestAway(parseInt(e.target.value))}>
-              <option value={4}>4 (Thu game)</option>
-              <option value={7}>7 (Normal)</option>
-              <option value={14}>14 (Bye week)</option>
-            </select>
+        {/* Rest days — auto or manual */}
+        {(away && restDays[away?.split(" ").pop()]?.daysSinceLastGame) || (home && restDays[home?.split(" ").pop()]?.daysSinceLastGame) ? (
+          <div style={{ marginBottom:"10px", padding:"8px 12px", background:"rgba(255,255,255,0.03)", borderRadius:"8px", fontSize:"11px", color:"#555" }}>
+            📅 Auto-detected: {away?.split(" ").pop()} {restDays[away?.split(" ").pop()]?.daysSinceLastGame ?? "?"}d rest · {home?.split(" ").pop()} {restDays[home?.split(" ").pop()]?.daysSinceLastGame ?? "?"}d rest
+            {restDays[away?.split(" ").pop()]?.isShortRest && <span style={{ color:"#ef4444", marginLeft:"8px" }}>⚠️ Short rest</span>}
+            {restDays[home?.split(" ").pop()]?.isShortRest && <span style={{ color:"#ef4444", marginLeft:"8px" }}>⚠️ Short rest</span>}
           </div>
-          <div>
-            <label style={S.lbl}>Home Rest Days</label>
-            <select style={S.sel} value={restHome} onChange={e => setRestHome(parseInt(e.target.value))}>
-              <option value={4}>4 (Thu game)</option>
-              <option value={7}>7 (Normal)</option>
-              <option value={14}>14 (Bye week)</option>
-            </select>
+        ) : (
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"10px", marginBottom:"10px" }}>
+            <div>
+              <label style={S.lbl}>Away Rest Days</label>
+              <select style={S.sel} value={restAway} onChange={e => setRestAway(parseInt(e.target.value))}>
+                <option value={4}>4 (Thu game)</option>
+                <option value={7}>7 (Normal)</option>
+                <option value={14}>14 (Bye week)</option>
+              </select>
+            </div>
+            <div>
+              <label style={S.lbl}>Home Rest Days</label>
+              <select style={S.sel} value={restHome} onChange={e => setRestHome(parseInt(e.target.value))}>
+                <option value={4}>4 (Thu game)</option>
+                <option value={7}>7 (Normal)</option>
+                <option value={14}>14 (Bye week)</option>
+              </select>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Weather display */}
         {weather && (
@@ -237,6 +256,11 @@ function NFLTab({ isPremium }) {
           {result.weatherNote && isPremium && (
             <div style={{ marginTop:"8px", padding:"6px 10px", background:"rgba(255,255,255,0.03)", borderRadius:"6px", fontSize:"10px", color:"#555" }}>
               🌤️ {result.weatherNote}
+            </div>
+          )}
+          {result.restNote && isPremium && (
+            <div style={{ marginTop:"4px", padding:"6px 10px", background:"rgba(255,255,255,0.03)", borderRadius:"6px", fontSize:"10px", color:"#555" }}>
+              📅 {result.restNote}
             </div>
           )}
         </div>

@@ -1,5 +1,15 @@
 // ── NBA GAME CARD ─────────────────────────────────────────────
-function NBAGameCard({ game, liveNBA, isPremium, onSelect }) {
+function NBAGameCard({ game, liveNBA, restDays, isPremium, onSelect }) {
+  // Auto B2B detection from rest days
+  const homeShortName = game.home?.split(" ").pop();
+  const awayShortName = game.away?.split(" ").pop();
+  const homeRest = restDays?.[homeShortName] || restDays?.[game.home] || null;
+  const awayRest = restDays?.[awayShortName] || restDays?.[game.away] || null;
+  const b2bHome = homeRest?.isB2B || false;
+  const b2bAway = awayRest?.isB2B || false;
+  const shortRestHome = homeRest?.isShortRest || false;
+  const shortRestAway = awayRest?.isShortRest || false;
+
   const getLiveTeam = (name) => {
     const shortName = name?.split(" ").pop();
     const liveEntry = liveNBA[shortName] ||
@@ -22,7 +32,9 @@ function NBAGameCard({ game, liveNBA, isPremium, onSelect }) {
 
   const homeTeam = getLiveTeam(game.home);
   const awayTeam = getLiveTeam(game.away);
-  const proj = projectBasketball(homeTeam, awayTeam, game.vegasSpread, game.vegasTotal);
+  const proj = projectBasketball(homeTeam, awayTeam, game.vegasSpread, game.vegasTotal, {
+    homeML: game.homeML, awayML: game.awayML, b2bHome, b2bAway
+  });
   const hasEdge = proj?.hasEdge;
   const isLive = Object.keys(liveNBA || {}).length > 0;
 
@@ -64,7 +76,7 @@ function NBAGameCard({ game, liveNBA, isPremium, onSelect }) {
           </div>
         </div>
         {/* Last 10 form */}
-        {isPremium && (homeLast10 || awayLast10) && (
+        {isPremium && (homeLast10 || awayLast10 || b2bHome || b2bAway) && (
           <div style={{ display:"flex", gap:"6px", flexWrap:"wrap" }}>
             {awayLast10 && (awayLast10.winsL10 + awayLast10.lossesL10 > 0) && (
               <div style={{ fontSize:"9px", color:"#555", background:"rgba(255,255,255,0.03)", padding:"3px 8px", borderRadius:"4px" }}>
@@ -76,6 +88,8 @@ function NBAGameCard({ game, liveNBA, isPremium, onSelect }) {
                 {game.home?.split(" ").pop()} L10: <span style={{ color: homeLast10.winsL10 >= 7 ? "#c8f54a" : homeLast10.winsL10 <= 3 ? "#ef4444" : "#aaa" }}>{homeLast10.winsL10}-{homeLast10.lossesL10}</span>
               </div>
             )}
+            {b2bAway && <div style={{ fontSize:"9px", color:"#ef4444", background:"rgba(239,68,68,0.08)", padding:"3px 8px", borderRadius:"4px" }}>⚠️ {game.away?.split(" ").pop()} B2B</div>}
+            {b2bHome && <div style={{ fontSize:"9px", color:"#ef4444", background:"rgba(239,68,68,0.08)", padding:"3px 8px", borderRadius:"4px" }}>⚠️ {game.home?.split(" ").pop()} B2B</div>}
           </div>
         )}
       </div>
@@ -87,6 +101,7 @@ function NBAGameCard({ game, liveNBA, isPremium, onSelect }) {
 function NBATab({ isPremium }) {
   const [games, setGames]       = useState([]);
   const [liveNBA, setLiveNBA]   = useState({});
+  const [restDays, setRestDays] = useState({});
   const [loading, setLoading]   = useState(true);
   const [selectedGame, setSelectedGame] = useState(null);
 
@@ -106,21 +121,24 @@ function NBATab({ isPremium }) {
         .then(data => (data || []).map(g => parseGame(g, "NBA")))
         .catch(() => []),
       fetchNBALive().catch(() => ({})),
-    ]).then(([oddsGames, nbaData]) => {
+      fetch("/api/rest-days?sport=nba").then(r => r.json()).catch(() => ({})),
+    ]).then(([oddsGames, nbaData, restData]) => {
       setGames(oddsGames);
       setLiveNBA(nbaData || {});
+      setRestDays(restData || {});
     }).finally(() => setLoading(false));
   }, []);
 
   const runManual = () => {
     const h = NBA[home], a = NBA[away];
     if (!h || !a) return;
-    // Merge live data if available
     const liveHome = liveNBA[home] || liveNBA[home?.split(" ").pop()];
     const liveAway = liveNBA[away] || liveNBA[away?.split(" ").pop()];
     const hData = liveHome ? { ...h, ortg: liveHome.ortg, drtg: liveHome.drtg, pace: liveHome.pace } : h;
     const aData = liveAway ? { ...a, ortg: liveAway.ortg, drtg: liveAway.drtg, pace: liveAway.pace } : a;
-    setResult(projectBasketball(hData, aData, spread, total, { b2bHome, b2bAway }));
+    const autoB2bHome = restDays[home?.split(" ").pop()]?.isB2B || false;
+    const autoB2bAway = restDays[away?.split(" ").pop()]?.isB2B || false;
+    setResult(projectBasketball(hData, aData, spread, total, { b2bHome: autoB2bHome, b2bAway: autoB2bAway, homeML: null, awayML: null }));
   };
 
   const liveActive = Object.keys(liveNBA).length > 0;
@@ -135,7 +153,7 @@ function NBATab({ isPremium }) {
       {!loading && games.length === 0 && <div style={{ color:"#444", fontSize:"12px", textAlign:"center", padding:"20px" }}>No NBA games scheduled right now.</div>}
 
       {games.map((g, i) => (
-        <NBAGameCard key={g.id || i} game={g} liveNBA={liveNBA} isPremium={isPremium} onSelect={setSelectedGame} />
+        <NBAGameCard key={g.id || i} game={g} liveNBA={liveNBA} restDays={restDays} isPremium={isPremium} onSelect={setSelectedGame} />
       ))}
 
       {/* Manual projector */}
@@ -147,10 +165,12 @@ function NBATab({ isPremium }) {
           <div><label style={S.lbl}>Vegas Spread (home)</label><input style={S.input} type="number" step="0.5" placeholder="-4.5" value={spread} onChange={e => setSpread(e.target.value)} /></div>
           <div><label style={S.lbl}>Vegas Total</label><input style={S.input} type="number" step="0.5" placeholder="224.5" value={total} onChange={e => setTotal(e.target.value)} /></div>
         </div>
-        <div style={{ display:"flex", gap:"16px", marginBottom:"12px" }}>
-          <label style={{ display:"flex", alignItems:"center", gap:"6px", fontSize:"12px", color:"#666", cursor:"pointer" }}><input type="checkbox" checked={b2bAway} onChange={e => setB2bAway(e.target.checked)} /> Away B2B</label>
-          <label style={{ display:"flex", alignItems:"center", gap:"6px", fontSize:"12px", color:"#666", cursor:"pointer" }}><input type="checkbox" checked={b2bHome} onChange={e => setB2bHome(e.target.checked)} /> Home B2B</label>
-        </div>
+        {/* Auto B2B detection */}
+        {(restDays[home?.split(" ").pop()]?.isB2B || restDays[away?.split(" ").pop()]?.isB2B) && (
+          <div style={{ marginBottom:"10px", padding:"8px 12px", background:"rgba(239,68,68,0.06)", borderRadius:"8px", fontSize:"11px", color:"#ef4444" }}>
+            ⚠️ B2B detected — fatigue penalty applied automatically
+          </div>
+        )}
         <button style={S.btn} onClick={runManual} disabled={!home || !away}>RUN PROJECTION →</button>
       </div>
 
@@ -224,6 +244,7 @@ function NCAABTab({ isPremium }) {
 function WNBATab({ isPremium }) {
   const [games, setGames]       = useState([]);
   const [liveWNBA, setLiveWNBA] = useState({});
+  const [restDays, setRestDays] = useState({});
   const [loading, setLoading]   = useState(true);
   const [selectedGame, setSelectedGame] = useState(null);
 
@@ -243,9 +264,11 @@ function WNBATab({ isPremium }) {
         .then(data => (data || []).map(g => parseGame(g, "WNBA")))
         .catch(() => []),
       fetchWNBALive().catch(() => ({})),
-    ]).then(([oddsGames, wnbaData]) => {
+      fetch("/api/rest-days?sport=wnba").then(r => r.json()).catch(() => ({})),
+    ]).then(([oddsGames, wnbaData, restData]) => {
       setGames(oddsGames);
       setLiveWNBA(wnbaData || {});
+      setRestDays(restData || {});
     }).finally(() => setLoading(false));
   }, []);
 
@@ -277,7 +300,11 @@ function WNBATab({ isPremium }) {
       {games.map((g, i) => {
         const homeTeam = getLiveTeam(g.home, WNBA);
         const awayTeam = getLiveTeam(g.away, WNBA);
-        const proj = projectBasketball(homeTeam, awayTeam, g.vegasSpread, g.vegasTotal, { homeAdv:2.5 });
+        const shortH = g.home?.split(" ").pop();
+        const shortA = g.away?.split(" ").pop();
+        const b2bH = restDays[shortH]?.isB2B || false;
+        const b2bA = restDays[shortA]?.isB2B || false;
+        const proj = projectBasketball(homeTeam, awayTeam, g.vegasSpread, g.vegasTotal, { homeAdv:2.5, homeML: g.homeML, awayML: g.awayML, b2bHome: b2bH, b2bAway: b2bA });
         const hasEdge = proj?.hasEdge;
         const shortHome = g.home?.split(" ").pop();
         const shortAway = g.away?.split(" ").pop();
@@ -339,10 +366,12 @@ function WNBATab({ isPremium }) {
           <div><label style={S.lbl}>Spread (home)</label><input style={S.input} type="number" step="0.5" value={spread} onChange={e => setSpread(e.target.value)} /></div>
           <div><label style={S.lbl}>Total</label><input style={S.input} type="number" step="0.5" value={total} onChange={e => setTotal(e.target.value)} /></div>
         </div>
-        <div style={{ display:"flex", gap:"16px", marginBottom:"12px" }}>
-          <label style={{ display:"flex", alignItems:"center", gap:"6px", fontSize:"12px", color:"#666", cursor:"pointer" }}><input type="checkbox" checked={b2bAway} onChange={e => setB2bAway(e.target.checked)} /> Away B2B</label>
-          <label style={{ display:"flex", alignItems:"center", gap:"6px", fontSize:"12px", color:"#666", cursor:"pointer" }}><input type="checkbox" checked={b2bHome} onChange={e => setB2bHome(e.target.checked)} /> Home B2B</label>
-        </div>
+        {/* Auto B2B detection */}
+        {(restDays[home?.split(" ").pop()]?.isB2B || restDays[away?.split(" ").pop()]?.isB2B) && (
+          <div style={{ marginBottom:"10px", padding:"8px 12px", background:"rgba(239,68,68,0.06)", borderRadius:"8px", fontSize:"11px", color:"#ef4444" }}>
+            ⚠️ B2B detected — fatigue penalty applied automatically
+          </div>
+        )}
         <button style={S.btn} onClick={runManual} disabled={!home || !away}>RUN PROJECTION →</button>
       </div>
 
