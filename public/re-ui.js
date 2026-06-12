@@ -137,35 +137,14 @@ function GameDetailModal({ game, sport, isPremium, onClose }) {
             rec: p.injured ? "⚠️ " + p.status : "LIVE",
             injured: p.injured,
             lines: formatPlayerLines(p.stats || {}, sport, true),
-            hasStats: p.hasStats,
           }));
         };
         const livePlayers = [
           ...formatLive(awayData, game.away),
           ...formatLive(homeData, game.home),
         ];
-        // Only use live data if at least some players have actual stats
-        const hasRealStats = livePlayers.some(p => p.hasStats && p.lines?.length > 0);
-        if (hasRealStats) {
+        if (livePlayers.length > 0) {
           setPlayers(livePlayers);
-        } else if (livePlayers.length > 0) {
-          // Has players but no stats yet — show static projections with live roster names
-          const staticHome = getPlayers(game.home, sport);
-          const staticAway = getPlayers(game.away, sport);
-          // Merge: use live names but static stat projections
-          const merged = [
-            ...livePlayers.filter(p => p.team === game.away).map((p, i) => ({
-              ...p,
-              lines: formatPlayerLines(staticAway[i] || {}, sport, false),
-              rec: p.injured ? "⚠️ " + p.status : "PROJ",
-            })),
-            ...livePlayers.filter(p => p.team === game.home).map((p, i) => ({
-              ...p,
-              lines: formatPlayerLines(staticHome[i] || {}, sport, false),
-              rec: p.injured ? "⚠️ " + p.status : "PROJ",
-            })),
-          ];
-          setPlayers(merged);
         } else {
           // Fall back to static
           const hp = getPlayers(game.home, sport);
