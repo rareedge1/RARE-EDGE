@@ -34,135 +34,161 @@ export default async function handler(req, res) {
       return res.status(200).json(teamList);
     }
 
-    // Find team by name or abbreviation
+    // Find team
     const teamEntry = teams.find(t =>
       t.team?.shortDisplayName?.toLowerCase() === team.toLowerCase() ||
       t.team?.displayName?.toLowerCase().includes(team.toLowerCase()) ||
       t.team?.abbreviation?.toLowerCase() === team.toLowerCase() ||
       team.toLowerCase().includes(t.team?.shortDisplayName?.toLowerCase())
     );
-    if (!teamEntry) return res.status(404).json({ error: "Team not found", available: teams.map(t => t.team.shortDisplayName) });
+    if (!teamEntry) return res.status(404).json({ error: "Team not found" });
 
     const teamId = teamEntry.team.id;
 
-    // Fetch roster with stats enabled
-    const [rosterRes, statsRes] = await Promise.all([
-      fetch(`https://site.api.espn.com/apis/site/v2/sports/${espnSport}/teams/${teamId}/roster?enable=injuries,stats`),
-      fetch(`https://site.api.espn.com/apis/site/v2/sports/${espnSport}/teams/${teamId}/statistics`),
-    ]);
+    // Try multiple ESPN roster URL formats
+    const rosterUrls = [
+      `https://site.api.espn.com/apis/site/v2/sports/${espnSport}/teams/${teamId}/roster`,
+      `https://sports.core.api.espn.com/v2/sports/${espnSport.split("/")[0]}/leagues/${espnSport.split("/")[1]}/seasons/2025/teams/${teamId}/athletes?limit=40`,
+    ];
 
-    const rosterData = await rosterRes.json();
+    let rosterData = null;
+    for (const url of rosterUrls) {
+      try {
+        const r = await fetch(url);
+        if (r.ok) {
+          rosterData = await r.json();
+          if (rosterData.athletes?.length || rosterData.items?.length) break;
+        }
+      } catch(e) { continue; }
+    }
 
-    // Extract stat labels from team stats for reference
-    let statLabels = {};
-    try {
-      const statsData = await statsRes.json();
-      for (const cat of statsData.results?.stats?.categories || []) {
-        for (const s of cat.stats || []) {
-          statLabels[s.abbreviation] = s.displayValue;
+    if (!rosterData) return res.status(500).json({ error: "Could not fetch roster" });
+
+    // Handle both response formats
+    const athleteList = rosterData.athletes || [];
+    const players = [];
+
+    // Format 1: athletes is array of groups with items
+    if (athleteList.length > 0 && athleteList[0]?.items) {
+      for (const group of athleteList) {
+        for (const athlete of group.items || []) {
+          players.push(extractPlayer(athlete, sport));
         }
       }
-    } catch(e) { /* ignore */ }
-
-    const players = [];
-    for (const group of rosterData.athletes || []) {
-      for (const athlete of group.items || []) {
-        // Extract player stats from their profile
-        const stats = {};
-        for (const cat of athlete.statistics?.splits?.categories || []) {
-          for (const s of cat.stats || []) {
-            stats[s.abbreviation || s.name] = s.value ?? s.displayValue;
-          }
-        }
-
-        // Map stats by sport
-        let mappedStats = {};
-        if (sport === "nba" || sport === "wnba") {
-          mappedStats = {
-            pts: parseFloat(stats.PTS || stats.points || 0).toFixed(1),
-            reb: parseFloat(stats.REB || stats.rebounds || 0).toFixed(1),
-            ast: parseFloat(stats.AST || stats.assists || 0).toFixed(1),
-            stl: parseFloat(stats.STL || stats.steals || 0).toFixed(1),
-            blk: parseFloat(stats.BLK || stats.blocks || 0).toFixed(1),
-          };
-        } else if (sport === "nfl") {
-          const pos = athlete.position?.abbreviation;
-          if (pos === "QB") {
-            mappedStats = {
-              pyds: parseFloat(stats.YDS || stats.passingYards || 0).toFixed(0),
-              ptds: parseFloat(stats.TD  || stats.passingTouchdowns || 0).toFixed(1),
-              ryds: parseFloat(stats.RYDS || stats.rushingYards || 0).toFixed(0),
-            };
-          } else if (["WR","TE","RB"].includes(pos)) {
-            mappedStats = {
-              rec:    parseFloat(stats.REC || stats.receptions || 0).toFixed(1),
-              ryds_r: parseFloat(stats.YDS || stats.receivingYards || 0).toFixed(0),
-              tds:    parseFloat(stats.TD  || stats.receivingTouchdowns || 0).toFixed(2),
-            };
-          }
-        } else if (sport === "nhl") {
-          mappedStats = {
-            g:   parseFloat(stats.G   || stats.goals || 0).toFixed(2),
-            a:   parseFloat(stats.A   || stats.assists || 0).toFixed(2),
-            pts: parseFloat(stats.PTS || stats.points || 0).toFixed(1),
-            sog: parseFloat(stats.SOG || stats.shotsOnGoal || 0).toFixed(1),
-          };
-        } else if (sport === "mlb") {
-          const pos = athlete.position?.abbreviation;
-          if (["SP","RP","P"].includes(pos)) {
-            mappedStats = {
-              era:  parseFloat(stats.ERA  || 0).toFixed(2),
-              so:   parseFloat(stats.SO   || stats.strikeouts || 0).toFixed(1),
-              whip: parseFloat(stats.WHIP || 0).toFixed(2),
-            };
-          } else {
-            mappedStats = {
-              avg: parseFloat(stats.AVG || stats.battingAverage || 0).toFixed(3),
-              hr:  parseFloat(stats.HR  || stats.homeRuns || 0).toFixed(0),
-              rbi: parseFloat(stats.RBI || 0).toFixed(0),
-              ops: parseFloat(stats.OPS || 0).toFixed(3),
-            };
-          }
-        }
-
-        const injuryStatus = athlete.injuries?.[0]?.status || "Active";
-        const isInjured = ["Out","Doubtful","Questionable","Day-To-Day"].includes(injuryStatus);
-
-        players.push({
-          id:       athlete.id,
-          name:     athlete.displayName || athlete.fullName,
-          shortName: athlete.shortName || athlete.lastName,
-          position: athlete.position?.abbreviation,
-          jersey:   athlete.jersey,
-          status:   injuryStatus,
-          injured:  isInjured,
-          stats:    mappedStats,
-          hasStats: Object.values(mappedStats).some(v => parseFloat(v) > 0),
-        });
+    }
+    // Format 2: athletes is flat array
+    else if (athleteList.length > 0) {
+      for (const athlete of athleteList) {
+        players.push(extractPlayer(athlete, sport));
+      }
+    }
+    // Format 3: items array (core API)
+    else if (rosterData.items?.length) {
+      // Fetch each athlete individually
+      const athleteRefs = rosterData.items.slice(0, 15);
+      const athleteData = await Promise.all(
+        athleteRefs.map(item =>
+          fetch(item.$ref).then(r => r.json()).catch(() => null)
+        )
+      );
+      for (const athlete of athleteData.filter(Boolean)) {
+        players.push(extractPlayer(athlete, sport));
       }
     }
 
-    // Sort — starters first, injured last, filter to players with stats or notable positions
-    const sorted = players
-      .filter(p => p.hasStats || ["QB","SF","PG","SG","C","PF","LW","RW","SP"].includes(p.position))
+    // Filter and sort
+    const valid = players
+      .filter(p => p && p.name)
       .sort((a, b) => {
         if (a.injured && !b.injured) return 1;
         if (!a.injured && b.injured) return -1;
-        const apts = parseFloat(a.stats?.pts || a.stats?.g || 0);
-        const bpts = parseFloat(b.stats?.pts || b.stats?.g || 0);
-        return bpts - apts;
+        return 0;
       })
-      .slice(0, 12); // top 12 players
+      .slice(0, 12);
 
-    res.setHeader("Cache-Control", "s-maxage=3600"); // cache 1hr
+    res.setHeader("Cache-Control", "s-maxage=3600");
     return res.status(200).json({
       team: teamEntry.team.displayName,
       shortName: teamEntry.team.shortDisplayName,
       sport,
-      players: sorted,
-      total: players.length,
+      players: valid,
+      total: valid.length,
     });
   } catch(e) {
     return res.status(500).json({ error: e.message });
   }
+}
+
+function extractPlayer(athlete, sport) {
+  if (!athlete) return null;
+
+  const injuryStatus = athlete.injuries?.[0]?.status ||
+    athlete.status?.type?.name || "Active";
+  const isInjured = ["Out","Doubtful","Questionable","Day-To-Day","Injured Reserve"].includes(injuryStatus);
+
+  // Extract stats from various response formats
+  const rawStats = {};
+  for (const cat of athlete.statistics?.splits?.categories || []) {
+    for (const s of cat.stats || []) {
+      rawStats[s.abbreviation || s.name] = s.value ?? s.displayValue;
+    }
+  }
+  // Also check athlete.stats directly
+  for (const s of athlete.stats || []) {
+    rawStats[s.abbreviation || s.name] = s.value ?? s.displayValue;
+  }
+
+  const stats = mapStats(rawStats, sport, athlete.position?.abbreviation);
+
+  return {
+    id: athlete.id,
+    name: athlete.displayName || athlete.fullName || athlete.shortName,
+    position: athlete.position?.abbreviation,
+    jersey: athlete.jersey,
+    status: injuryStatus,
+    injured: isInjured,
+    stats,
+    hasStats: Object.values(stats).some(v => parseFloat(v) > 0),
+  };
+}
+
+function mapStats(raw, sport, pos) {
+  if (sport === "nba" || sport === "wnba") {
+    return {
+      pts: parseFloat(raw.PTS || raw.points || 0).toFixed(1),
+      reb: parseFloat(raw.REB || raw.rebounds || raw.totalRebounds || 0).toFixed(1),
+      ast: parseFloat(raw.AST || raw.assists || 0).toFixed(1),
+      stl: parseFloat(raw.STL || raw.steals || 0).toFixed(1),
+    };
+  }
+  if (sport === "nfl") {
+    if (pos === "QB") return {
+      pyds: parseFloat(raw.YDS || raw.passingYards || 0).toFixed(0),
+      ptds: parseFloat(raw.TD  || raw.passingTouchdowns || 0).toFixed(1),
+      ryds: parseFloat(raw.RYDS || raw.rushingYards || 0).toFixed(0),
+    };
+    return {
+      rec:    parseFloat(raw.REC || raw.receptions || 0).toFixed(1),
+      ryds_r: parseFloat(raw.YDS || raw.receivingYards || 0).toFixed(0),
+      tds:    parseFloat(raw.TD  || raw.touchdowns || 0).toFixed(2),
+    };
+  }
+  if (sport === "nhl") return {
+    g:   parseFloat(raw.G   || raw.goals || 0).toFixed(2),
+    a:   parseFloat(raw.A   || raw.assists || 0).toFixed(2),
+    sog: parseFloat(raw.SOG || raw.shotsOnGoal || 0).toFixed(1),
+  };
+  if (sport === "mlb") {
+    if (["SP","RP","P"].includes(pos)) return {
+      era:  parseFloat(raw.ERA  || 0).toFixed(2),
+      so:   parseFloat(raw.SO   || raw.strikeouts || 0).toFixed(1),
+      whip: parseFloat(raw.WHIP || 0).toFixed(2),
+    };
+    return {
+      avg: parseFloat(raw.AVG || raw.battingAverage || 0).toFixed(3),
+      hr:  parseFloat(raw.HR  || raw.homeRuns || 0).toFixed(0),
+      rbi: parseFloat(raw.RBI || 0).toFixed(0),
+    };
+  }
+  return {};
 }
