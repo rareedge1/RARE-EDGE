@@ -120,51 +120,50 @@ function GameDetailModal({ game, sport, isPremium, onClose }) {
   }, []);
 
   useEffect(() => {
-    // Try live API first, fall back to static database
+    // Always get static projections as base
+    const staticHome = getPlayers(game.home, sport);
+    const staticAway = getPlayers(game.away, sport);
+    const formatStatic = (players, teamName) => players.map(p => ({
+      name: p.n || p.name,
+      team: teamName,
+      rec: "PROJ",
+      injured: false,
+      lines: formatPlayerLines(p, sport, false),
+    }));
+    const staticPlayers = [
+      ...formatStatic(staticAway, game.away),
+      ...formatStatic(staticHome, game.home),
+    ];
+
     const liveSupported = ["nba","wnba","nfl","nhl","mlb"].includes(sport);
-    if (liveSupported) {
-      const homeShort = game.home?.split(" ").pop();
-      const awayShort = game.away?.split(" ").pop();
-      Promise.all([
-        fetch(`/api/players?sport=${sport}&team=${encodeURIComponent(homeShort)}`).then(r => r.json()).catch(() => null),
-        fetch(`/api/players?sport=${sport}&team=${encodeURIComponent(awayShort)}`).then(r => r.json()).catch(() => null),
-      ]).then(([homeData, awayData]) => {
-        const formatLive = (data, teamName) => {
-          if (!data?.players?.length) return [];
-          return data.players.slice(0, 5).map(p => ({
-            name: p.name,
-            team: teamName,
-            rec: p.injured ? "⚠️ " + p.status : "LIVE",
-            injured: p.injured,
-            lines: formatPlayerLines(p.stats || {}, sport, true),
-          }));
-        };
-        const livePlayers = [
-          ...formatLive(awayData, game.away),
-          ...formatLive(homeData, game.home),
-        ];
-        if (livePlayers.length > 0) {
-          setPlayers(livePlayers);
-        } else {
-          // Fall back to static
-          const hp = getPlayers(game.home, sport);
-          const ap = getPlayers(game.away, sport);
-          const format = (players, teamName) => players.map(p => ({
-            name: p.n || p.name, team: teamName, rec: "PROJ",
-            lines: formatPlayerLines(p, sport, false),
-          }));
-          setPlayers([...format(ap, game.away), ...format(hp, game.home)]);
-        }
-      });
-    } else {
-      const hp = getPlayers(game.home, sport);
-      const ap = getPlayers(game.away, sport);
-      const format = (players, teamName) => players.map(p => ({
-        name: p.n || p.name, team: teamName, rec: "PROJ",
-        lines: formatPlayerLines(p, sport, false),
-      }));
-      setPlayers([...format(ap, game.away), ...format(hp, game.home)]);
+    if (!liveSupported) {
+      setPlayers(staticPlayers);
+      return;
     }
+
+    // Fetch live roster for current names + injury status
+    const homeShort = game.home?.split(" ").pop();
+    const awayShort = game.away?.split(" ").pop();
+    Promise.all([
+      fetch(`/api/players?sport=${sport}&team=${encodeURIComponent(homeShort)}`).then(r => r.json()).catch(() => null),
+      fetch(`/api/players?sport=${sport}&team=${encodeURIComponent(awayShort)}`).then(r => r.json()).catch(() => null),
+    ]).then(([homeData, awayData]) => {
+      const mergePlayers = (liveData, staticList, teamName) => {
+        if (!liveData?.players?.length) return formatStatic(staticList, teamName);
+        return liveData.players.slice(0, 5).map((liveP, i) => ({
+          name: liveP.name,
+          team: teamName,
+          rec: liveP.injured ? "⚠️ " + liveP.status : "PROJ",
+          injured: liveP.injured,
+          lines: staticList[i] ? formatPlayerLines(staticList[i], sport, false) : [],
+        }));
+      };
+      const merged = [
+        ...mergePlayers(awayData, staticAway, game.away),
+        ...mergePlayers(homeData, staticHome, game.home),
+      ];
+      setPlayers(merged.length > 0 ? merged : staticPlayers);
+    }).catch(() => setPlayers(staticPlayers));
   }, [game, sport]);
 
   // Project based on sport
