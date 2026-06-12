@@ -1,3 +1,89 @@
+// ── ROI CALCULATOR ──────────────────────────────────────────
+function ROICalculator({ calls, wins, losses, pushes }) {
+  // Standard -110 odds: win 0.909 units per bet, lose 1 unit per bet
+  const WIN_PAYOUT  = 0.909;
+  const LOSS_AMOUNT = 1.0;
+  const PUSH_AMOUNT = 0.0;
+
+  const grossProfit = wins * WIN_PAYOUT;
+  const grossLoss   = losses * LOSS_AMOUNT;
+  const netUnits    = +(grossProfit - grossLoss).toFixed(2);
+  const totalBets   = wins + losses + pushes;
+  const roi         = totalBets > 0 ? +((netUnits / totalBets) * 100).toFixed(1) : 0;
+  const isProfit    = netUnits > 0;
+
+  // Monthly projection (assume ~5 edge calls per day)
+  const daysTracked  = Math.max(1, Math.ceil(totalBets / 5));
+  const unitsPerDay  = totalBets > 0 ? netUnits / daysTracked : 0;
+  const monthly      = +(unitsPerDay * 30).toFixed(1);
+
+  // Dollar amounts at different unit sizes
+  const at25  = +(netUnits * 25).toFixed(0);
+  const at50  = +(netUnits * 50).toFixed(0);
+  const at100 = +(netUnits * 100).toFixed(0);
+
+  if (totalBets === 0) return null;
+
+  return (
+    <div style={{ background:"rgba(255,255,255,0.02)", border:`1px solid ${isProfit ? "rgba(200,245,74,0.15)" : "rgba(239,68,68,0.15)"}`, borderRadius:"12px", padding:"14px", marginBottom:"16px" }}>
+      <div style={{ fontSize:"10px", color:"#555", letterSpacing:"2px", marginBottom:"12px" }}>💰 ROI CALCULATOR · 1 UNIT PER CALL @ -110</div>
+
+      {/* Net units */}
+      <div style={{ textAlign:"center", marginBottom:"14px" }}>
+        <div style={{ fontFamily:"'Bebas Neue',cursive", fontSize:"48px", color: isProfit ? "#c8f54a" : "#ef4444", lineHeight:1 }}>
+          {isProfit ? "+" : ""}{netUnits}u
+        </div>
+        <div style={{ fontSize:"11px", color:"#444", marginTop:"4px" }}>
+          NET UNITS · {roi > 0 ? "+" : ""}{roi}% ROI
+        </div>
+      </div>
+
+      {/* Breakdown */}
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:"8px", marginBottom:"14px" }}>
+        <div style={{ textAlign:"center", background:"rgba(200,245,74,0.05)", borderRadius:"8px", padding:"10px" }}>
+          <div style={{ fontFamily:"'Bebas Neue',cursive", fontSize:"22px", color:"#c8f54a" }}>+{(wins * WIN_PAYOUT).toFixed(2)}u</div>
+          <div style={{ fontSize:"9px", color:"#555" }}>{wins} WINS</div>
+        </div>
+        <div style={{ textAlign:"center", background:"rgba(239,68,68,0.05)", borderRadius:"8px", padding:"10px" }}>
+          <div style={{ fontFamily:"'Bebas Neue',cursive", fontSize:"22px", color:"#ef4444" }}>-{(losses * LOSS_AMOUNT).toFixed(2)}u</div>
+          <div style={{ fontSize:"9px", color:"#555" }}>{losses} LOSSES</div>
+        </div>
+        <div style={{ textAlign:"center", background:"rgba(255,255,255,0.03)", borderRadius:"8px", padding:"10px" }}>
+          <div style={{ fontFamily:"'Bebas Neue',cursive", fontSize:"22px", color: isProfit ? "#c8f54a" : "#ef4444" }}>{isProfit ? "+" : ""}{netUnits}u</div>
+          <div style={{ fontSize:"9px", color:"#555" }}>NET</div>
+        </div>
+      </div>
+
+      {/* Dollar value at different unit sizes */}
+      <div style={{ marginBottom:"12px" }}>
+        <div style={{ fontSize:"10px", color:"#444", letterSpacing:"1px", marginBottom:"8px" }}>IF 1 UNIT =</div>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:"6px" }}>
+          {[["$25", at25], ["$50", at50], ["$100", at100]].map(([label, val]) => (
+            <div key={label} style={{ textAlign:"center", background:"rgba(255,255,255,0.02)", borderRadius:"8px", padding:"8px" }}>
+              <div style={{ fontSize:"9px", color:"#444", marginBottom:"3px" }}>{label}/unit</div>
+              <div style={{ fontSize:"14px", fontWeight:"700", color: val >= 0 ? "#c8f54a" : "#ef4444" }}>
+                {val >= 0 ? "+" : ""}${Math.abs(val)}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Monthly projection */}
+      {totalBets >= 10 && (
+        <div style={{ padding:"10px 12px", background: isProfit ? "rgba(200,245,74,0.04)" : "rgba(239,68,68,0.04)", borderRadius:"8px", fontSize:"11px", color:"#555", lineHeight:"1.6" }}>
+          📅 At this pace: <span style={{ color: isProfit ? "#c8f54a" : "#ef4444", fontWeight:"600" }}>{monthly > 0 ? "+" : ""}{monthly} units/month</span>
+          {monthly > 0 && <span> · <span style={{ color:"#c8f54a" }}>${(monthly * 50).toFixed(0)}/mo at $50/unit</span></span>}
+        </div>
+      )}
+
+      <div style={{ marginTop:"10px", fontSize:"10px", color:"#333", lineHeight:"1.6" }}>
+        Assumes flat betting 1 unit per edge call at standard -110 juice. Past performance does not guarantee future results.
+      </div>
+    </div>
+  );
+}
+
 // ── CALIBRATION DASHBOARD ────────────────────────────────────
 function CalibrationDashboard({ isPremium }) {
   const [data, setData]     = useState(null);
@@ -148,6 +234,9 @@ function CalibrationDashboard({ isPremium }) {
           </div>
         </div>
       )}
+
+      {/* ROI Calculator */}
+      <ROICalculator calls={data.total} wins={data.wins} losses={data.losses} pushes={data.pushes} />
 
       {/* What to do next */}
       <div style={{ background:"rgba(200,245,74,0.03)", border:"1px solid rgba(200,245,74,0.10)", borderRadius:"12px", padding:"14px" }}>
