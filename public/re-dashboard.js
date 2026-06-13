@@ -390,7 +390,7 @@ function DashboardTab({ isPremium }) {
       const games = results.flat().filter(g => {
         // Keep games that started within last 36 hours or are in the future
         const start = new Date(g.rawStart).getTime();
-        return (now - start) < 36 * 60 * 60 * 1000;
+        const gDateStr = new Date(g.rawStart).toLocaleDateString('en-US', { timeZone: 'America/Chicago' }); const todayChicago = new Date().toLocaleDateString('en-US', { timeZone: 'America/Chicago' }); const tomorrowD = new Date(); tomorrowD.setDate(tomorrowD.getDate()+1); const tomorrowChicago = tomorrowD.toLocaleDateString('en-US', { timeZone: 'America/Chicago' }); const dayAfterD = new Date(); dayAfterD.setDate(dayAfterD.getDate()+2); const dayAfterChicago = dayAfterD.toLocaleDateString('en-US', { timeZone: 'America/Chicago' }); const dayAfter2D = new Date(); dayAfter2D.setDate(dayAfter2D.getDate()+3); const dayAfter2Chicago = dayAfter2D.toLocaleDateString('en-US', { timeZone: 'America/Chicago' }); return [todayChicago, tomorrowChicago, dayAfterChicago, dayAfter2Chicago].includes(gDateStr);
       });
       setOddsGames(games);
       // Save line snapshots for movement tracking
