@@ -120,6 +120,29 @@ function DashboardCard({ game, isPremium, index, scoreData, mlbLive, movement, e
   const hasEdge = proj?.hasEdge;
   const sportKey = game.sportLabel?.toLowerCase().replace("/", "_").replace(" ", "_") || "nfl";
 
+  // Send push notification for UPCOMING edge games
+  useEffect(() => {
+    if (!hasEdge || !isPremium || isFinal || isLive) return;
+    // Only notify for games starting in the next 3 hours
+    const gameStart = new Date(game.rawStart).getTime();
+    const now = Date.now();
+    const hoursUntilGame = (gameStart - now) / (1000 * 60 * 60);
+    if (hoursUntilGame < 0 || hoursUntilGame > 3) return;
+    // Send push notification
+    fetch("/api/push", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "notify",
+        notification: {
+          title: `⚡ RARE EDGE — ${game.sportLabel} Edge`,
+          body: `${game.away} @ ${game.home} · ${Math.round(hoursUntilGame * 60)}min · ${proj?.vTotal ? `Total edge: ${proj.vTotal > 0 ? "+" : ""}${proj.vTotal}` : `Spread edge: ${proj?.vSpread > 0 ? "+" : ""}${proj?.vSpread}`}`,
+          data: { url: "https://arareedge.com/app" }
+        }
+      })
+    }).catch(() => {});
+  }, [hasEdge, game.id]);
+
   // Auto-log edge calls to Supabase — FINAL games only
   useEffect(() => {
     if (!hasEdge || !isPremium || !isFinal || !homeScore || !awayScore) return;
