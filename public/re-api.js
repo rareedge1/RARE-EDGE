@@ -26,16 +26,52 @@ function parseGame(g, sportLabel) {
   const d = new Date(g.commence_time);
   const time = d.toLocaleString("en-US", { weekday:"short", month:"short", day:"numeric", hour:"numeric", minute:"2-digit" });
 
-  // Multi-book odds
-  const books = (g.bookmakers || []).slice(0, 4).map(b => {
-    const sp = b.markets?.find(m => m.key === "spreads");
-    const to = b.markets?.find(m => m.key === "totals");
+  // Multi-book line shopping
+  const books = (g.bookmakers || []).map(b => {
+    const sp  = b.markets?.find(m => m.key === "spreads");
+    const to  = b.markets?.find(m => m.key === "totals");
+    const ml  = b.markets?.find(m => m.key === "h2h");
+    const homeSpreadData = sp?.outcomes?.find(o => o.name === g.home_team);
+    const awaySpreadData = sp?.outcomes?.find(o => o.name === g.away_team);
+    const homeMLData = ml?.outcomes?.find(o => o.name === g.home_team);
+    const awayMLData = ml?.outcomes?.find(o => o.name === g.away_team);
+    const totalData  = to?.outcomes?.[0];
     return {
-      book:   b.title,
-      spread: sp?.outcomes?.find(o => o.name === g.home_team)?.point,
-      total:  to?.outcomes?.[0]?.point,
+      book:        b.title,
+      bookKey:     b.key,
+      spread:      homeSpreadData?.point,
+      spreadPrice: homeSpreadData?.price,
+      awaySpread:  awaySpreadData?.point,
+      total:       totalData?.point,
+      totalOver:   to?.outcomes?.find(o => o.name === "Over")?.price,
+      totalUnder:  to?.outcomes?.find(o => o.name === "Under")?.price,
+      homeML:      homeMLData?.price,
+      awayML:      awayMLData?.price,
     };
-  }).filter(b => b.spread !== undefined || b.total !== undefined);
+  }).filter(b => b.spread !== undefined || b.total !== undefined || b.homeML !== undefined);
+
+  // Best lines across all books
+  const allSpreads = books.filter(b => b.spread !== undefined).map(b => ({ book: b.book, val: b.spread, price: b.spreadPrice }));
+  const allTotals  = books.filter(b => b.total !== undefined).map(b => ({ book: b.book, val: b.total, overPrice: b.totalOver, underPrice: b.totalUnder }));
+  const allHomeML  = books.filter(b => b.homeML !== undefined).map(b => ({ book: b.book, val: b.homeML }));
+  const allAwayML  = books.filter(b => b.awayML !== undefined).map(b => ({ book: b.book, val: b.awayML }));
+
+  // Best spread for home team (highest point = best for home)
+  const bestHomeSpread = allSpreads.length ? allSpreads.reduce((a, b) => a.val > b.val ? a : b) : null;
+  // Best total for over (lowest number = best for under, highest = best for over)
+  const bestOver  = allTotals.length ? allTotals.reduce((a, b) => (a.overPrice || -110) > (b.overPrice || -110) ? a : b) : null;
+  const bestUnder = allTotals.length ? allTotals.reduce((a, b) => (a.underPrice || -110) > (b.underPrice || -110) ? a : b) : null;
+  // Best moneyline prices
+  const bestHomeML = allHomeML.length ? allHomeML.reduce((a, b) => {
+    const aVal = a.val > 0 ? a.val : -10000/Math.abs(a.val);
+    const bVal = b.val > 0 ? b.val : -10000/Math.abs(b.val);
+    return aVal > bVal ? a : b;
+  }) : null;
+  const bestAwayML = allAwayML.length ? allAwayML.reduce((a, b) => {
+    const aVal = a.val > 0 ? a.val : -10000/Math.abs(a.val);
+    const bVal = b.val > 0 ? b.val : -10000/Math.abs(b.val);
+    return aVal > bVal ? a : b;
+  }) : null;
 
   return {
     id:          g.id,
@@ -50,6 +86,13 @@ function parseGame(g, sportLabel) {
     awayML:      awayH2H?.price,
     spreadPrice: homeSpread?.price,
     books,
+    bestLines: {
+      homeSpread: bestHomeSpread,
+      over:       bestOver,
+      under:      bestUnder,
+      homeML:     bestHomeML,
+      awayML:     bestAwayML,
+    },
   };
 }
 
@@ -145,23 +188,7 @@ async function fetchWNBALive() {
   } catch(err) { return {}; }
 }
 
-// Fetch live MLB pitcher + team form data
-async function fetchMLBLive() {
-  try { const r = await fetch("/api/mlb"); if (!r.ok) return []; return r.json(); }
-  catch(err) { return []; }
-}
 
-// Fetch live NBA team stats
-async function fetchNBALive() {
-  try { const r = await fetch("/api/nba"); if (!r.ok) return {}; return r.json(); }
-  catch(err) { return {}; }
-}
-
-// Fetch live WNBA team stats
-async function fetchWNBALive() {
-  try { const r = await fetch("/api/wnba"); if (!r.ok) return {}; return r.json(); }
-  catch(err) { return {}; }
-}
 
 // Fetch live NFL team stats
 async function fetchNFLLive() {

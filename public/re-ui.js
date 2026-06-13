@@ -253,13 +253,62 @@ function GameDetailModal({ game, sport, isPremium, onClose }) {
               )}
               {game.books?.length > 0 && (
                 <div>
-                  <div style={{ fontSize:"10px", color:"#444", letterSpacing:"2px", textTransform:"uppercase", marginBottom:"10px" }}>Live Odds</div>
-                  {game.books.map((b, i) => (
-                    <div key={i} style={{ display:"flex", justifyContent:"space-between", padding:"8px 0", borderBottom:"1px solid rgba(255,255,255,0.04)", fontSize:"12px" }}>
-                      <span style={{ color:"#555" }}>{b.book}</span>
-                      <span style={{ color:"#888" }}>{b.spread != null ? `${b.spread > 0 ? "+" : ""}${b.spread}` : "—"} · O/U {b.total ?? "—"}</span>
+                  {/* Best lines banner */}
+                  {game.bestLines && isPremium && (
+                    <div style={{ background:"rgba(200,245,74,0.04)", border:"1px solid rgba(200,245,74,0.12)", borderRadius:"12px", padding:"12px 14px", marginBottom:"14px" }}>
+                      <div style={{ fontSize:"10px", color:"#c8f54a", letterSpacing:"2px", marginBottom:"10px" }}>🏆 BEST AVAILABLE LINES</div>
+                      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"8px" }}>
+                        {game.bestLines.homeSpread && (
+                          <div style={{ background:"rgba(255,255,255,0.03)", borderRadius:"8px", padding:"8px 10px" }}>
+                            <div style={{ fontSize:"9px", color:"#444", marginBottom:"3px" }}>BEST SPREAD ({game.home?.split(" ").pop()})</div>
+                            <div style={{ fontSize:"14px", color:"#c8f54a", fontWeight:"700" }}>{game.bestLines.homeSpread.val > 0 ? "+" : ""}{game.bestLines.homeSpread.val}</div>
+                            <div style={{ fontSize:"9px", color:"#555" }}>{game.bestLines.homeSpread.book}</div>
+                          </div>
+                        )}
+                        {game.bestLines.homeML && (
+                          <div style={{ background:"rgba(255,255,255,0.03)", borderRadius:"8px", padding:"8px 10px" }}>
+                            <div style={{ fontSize:"9px", color:"#444", marginBottom:"3px" }}>BEST ML ({game.home?.split(" ").pop()})</div>
+                            <div style={{ fontSize:"14px", color:"#c8f54a", fontWeight:"700" }}>{game.bestLines.homeML.val > 0 ? "+" : ""}{game.bestLines.homeML.val}</div>
+                            <div style={{ fontSize:"9px", color:"#555" }}>{game.bestLines.homeML.book}</div>
+                          </div>
+                        )}
+                        {game.bestLines.over && (
+                          <div style={{ background:"rgba(255,255,255,0.03)", borderRadius:"8px", padding:"8px 10px" }}>
+                            <div style={{ fontSize:"9px", color:"#444", marginBottom:"3px" }}>BEST OVER PRICE</div>
+                            <div style={{ fontSize:"14px", color:"#c8f54a", fontWeight:"700" }}>{game.bestLines.over.overPrice > 0 ? "+" : ""}{game.bestLines.over.overPrice}</div>
+                            <div style={{ fontSize:"9px", color:"#555" }}>{game.bestLines.over.book}</div>
+                          </div>
+                        )}
+                        {game.bestLines.under && (
+                          <div style={{ background:"rgba(255,255,255,0.03)", borderRadius:"8px", padding:"8px 10px" }}>
+                            <div style={{ fontSize:"9px", color:"#444", marginBottom:"3px" }}>BEST UNDER PRICE</div>
+                            <div style={{ fontSize:"14px", color:"#c8f54a", fontWeight:"700" }}>{game.bestLines.under.underPrice > 0 ? "+" : ""}{game.bestLines.under.underPrice}</div>
+                            <div style={{ fontSize:"9px", color:"#555" }}>{game.bestLines.under.book}</div>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  ))}
+                  )}
+
+                  {/* All books comparison */}
+                  <div style={{ fontSize:"10px", color:"#444", letterSpacing:"2px", textTransform:"uppercase", marginBottom:"10px" }}>ALL BOOKS</div>
+                  {game.books.map((b, i) => {
+                    const isBestSpread = game.bestLines?.homeSpread?.book === b.book;
+                    const isBestML = game.bestLines?.homeML?.book === b.book;
+                    const isBestOver = game.bestLines?.over?.book === b.book;
+                    const isBestUnder = game.bestLines?.under?.book === b.book;
+                    const isAnyBest = isBestSpread || isBestML || isBestOver || isBestUnder;
+                    return (
+                      <div key={i} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"8px 10px", marginBottom:"4px", borderRadius:"8px", background: isAnyBest && isPremium ? "rgba(200,245,74,0.04)" : "rgba(255,255,255,0.02)", border: isAnyBest && isPremium ? "1px solid rgba(200,245,74,0.12)" : "1px solid transparent" }}>
+                        <span style={{ fontSize:"12px", color: isAnyBest && isPremium ? "#c8f54a" : "#555", fontWeight: isAnyBest ? "600" : "400" }}>{b.book}{isAnyBest && isPremium ? " ⭐" : ""}</span>
+                        <div style={{ display:"flex", gap:"10px", fontSize:"11px" }}>
+                          {b.spread != null && <span style={{ color: isBestSpread && isPremium ? "#c8f54a" : "#888" }}>{b.spread > 0 ? "+" : ""}{b.spread}</span>}
+                          {b.total != null && <span style={{ color:"#777" }}>O/U {b.total}</span>}
+                          {b.homeML != null && <span style={{ color: isBestML && isPremium ? "#c8f54a" : "#666" }}>ML {b.homeML > 0 ? "+" : ""}{b.homeML}</span>}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
