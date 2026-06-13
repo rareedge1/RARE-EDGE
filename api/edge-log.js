@@ -48,6 +48,24 @@ export default async function handler(req, res) {
         body: JSON.stringify({ sport, home, away, game_date, proj_total, vegas_total, edge_value, edge_type, result: "pending" })
       });
       const data = await r.json();
+
+      // Send push notification to all subscribers
+      try {
+        const baseUrl = req.headers.host?.includes("localhost") ? "http://localhost:3000" : "https://arareedge.com";
+        fetch(`${baseUrl}/api/push`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "notify",
+            notification: {
+              title: `⚡ RARE EDGE — ${sport} Edge Detected`,
+              body: `${away} @ ${home} · Edge: ${edge_value > 0 ? "+" : ""}${edge_value}`,
+              data: { url: "https://arareedge.com/app" }
+            }
+          })
+        }).catch(() => {});
+      } catch(e) { /* ignore push errors */ }
+
       return res.status(201).json(data);
     } catch(e) {
       return res.status(500).json({ error: e.message });
