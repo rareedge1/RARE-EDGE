@@ -20,6 +20,7 @@
     { "source": "/re-dashboard.js", "destination": "/re-dashboard.js" },
     { "source": "/re-calibration.js", "destination": "/re-calibration.js" },
     { "source": "/re-app.js", "destination": "/re-app.js" },
+    { "source": "/record", "destination": "/record.html" },
     { "source": "/(.*)", "destination": "/app.html" }
   ],
   "crons": [
