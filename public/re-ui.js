@@ -140,12 +140,22 @@ function GameDetailModal({ game, sport, isPremium, onClose }) {
       var awayData = results[1];
       var merge = function(liveData, staticList, team) {
         if (!liveData || !liveData.players || !liveData.players.length) return fmt(staticList, team);
-        return liveData.players.slice(0, 5).map(function(liveP, i) {
+        return liveData.players.slice(0, 5).map(function(liveP) {
+          // Match by last name
+          var liveLast = (liveP.name || "").split(" ").pop().toLowerCase();
+          var staticMatch = null;
+          for (var si = 0; si < staticList.length; si++) {
+            var sName = staticList[si].n || staticList[si].name || "";
+            var sLast = sName.split(" ").pop().toLowerCase();
+            // Handle abbreviated names like "C. Clark" -> last name "Clark"
+            var sLastFull = sName.split(" ").filter(function(p) { return p.length > 2; }).pop()?.toLowerCase() || sLast;
+            if (sLast === liveLast || sLastFull === liveLast) { staticMatch = staticList[si]; break; }
+          }
           return {
             name: liveP.name, team: team,
             rec: liveP.injured ? "⚠️ " + liveP.status : "PROJ",
             injured: liveP.injured,
-            lines: staticList[i] ? formatPlayerLines(staticList[i], sport) : [],
+            lines: staticMatch ? formatPlayerLines(staticMatch, sport) : [],
           };
         });
       };
