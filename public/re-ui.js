@@ -176,19 +176,20 @@ function GameDetailModal({ game, sport, isPremium, onClose }) {
     };
     const sp = sport || labelMap[game.sportLabel?.toLowerCase()] || game.sportLabel?.toLowerCase();
     fetchProps(sp, game.id).then(data => {
-      if (!data) return;
+      if (!data?.bookmakers) return;
+      // Build map: playerName -> { statKey -> { point, price, book } }
       const lines = {};
       for (const bookmaker of data.bookmakers || []) {
         for (const market of bookmaker.markets || []) {
           for (const outcome of market.outcomes || []) {
-            const key = `${outcome.description}:${market.key}`;
-            if (!lines[key] || (outcome.point != null && lines[key].point == null)) {
-              lines[key] = {
-                player: outcome.description,
-                stat: market.key,
+            if (outcome.name !== "Over" || outcome.point == null) continue;
+            const playerName = outcome.description?.toLowerCase().trim();
+            if (!playerName) continue;
+            if (!lines[playerName]) lines[playerName] = {};
+            if (!lines[playerName][market.key]) {
+              lines[playerName][market.key] = {
                 point: outcome.point,
                 price: outcome.price,
-                name: outcome.name,
                 book: bookmaker.title,
               };
             }
@@ -395,24 +396,37 @@ function GameDetailModal({ game, sport, isPremium, onClose }) {
                 <div style={{ textAlign:"center", padding:"30px", color:"#444", fontSize:"13px" }}>No player projections for this matchup.</div>
               )}
               {isPremium && players.map((p, pi) => {
-                // Find prop lines for this player
+                // Find prop lines for this player using flexible name matching
                 const playerEdges = [];
-                for (const [key, line] of Object.entries(propLines)) {
-                  if (!key.startsWith(p.name + ":") && !key.includes(":" + p.name)) continue;
-                  if (line.name !== "Over" || line.point == null) continue;
-                  // Find our projection for this stat
-                  const statMap = {
-                    "player_points": "pts", "player_rebounds": "reb", "player_assists": "ast",
-                    "player_pass_yds": "pyds", "player_rush_yds": "ryds", "player_reception_yds": "ryds_r",
-                    "player_strikeouts": "so", "player_home_runs": "hr",
-                    "player_goals": "g", "player_shots_on_goal": "sog",
-                  };
-                  const projKey = statMap[line.stat];
-                  const projVal = projKey ? parseFloat(p.lines.find(l => l.stat?.toLowerCase().includes(projKey) || projKey.includes(l.stat?.toLowerCase()))?.proj || 0) : 0;
-                  if (projVal > 0) {
-                    const edge = +(projVal - line.point).toFixed(1);
+                const pNameLower = p.name?.toLowerCase().trim();
+                // Try to find player in propLines by full name or last name match
+                const propKey = Object.keys(propLines).find(k => {
+                  if (k === pNameLower) return true;
+                  const parts = pNameLower?.split(" ");
+                  const lastName = parts?.[parts.length - 1];
+                  return lastName && k.includes(lastName) && k.split(" ").length >= 2;
+                });
+                const playerProps = propKey ? propLines[propKey] : null;
+
+                const statMap = {
+                  "player_points": ["pts","PTS"], "player_rebounds": ["reb","REB"],
+                  "player_assists": ["ast","AST"], "player_pass_yds": ["pyds","PASS YDS"],
+                  "player_rush_yds": ["ryds","RUSH YDS"], "player_reception_yds": ["ryds_r","REC YDS"],
+                  "player_strikeouts": ["so","K's"], "player_home_runs": ["hr","HR"],
+                  "player_goals": ["g","GOALS"], "player_shots_on_goal": ["sog","SOG"],
+                  "player_assists_rebounds": ["reb","REB"],
+                };
+
+                if (playerProps) {
+                  for (const [statKey, propData] of Object.entries(playerProps)) {
+                    const statAliases = statMap[statKey] || [];
+                    const projLine = p.lines.find(l => statAliases.some(a => l.stat?.toUpperCase() === a.toUpperCase()));
+                    if (!projLine) continue;
+                    const projVal = parseFloat(projLine.proj);
+                    if (!projVal || projVal === 0) continue;
+                    const edge = +(projVal - propData.point).toFixed(1);
                     const hasEdge = Math.abs(edge) >= 1.5;
-                    playerEdges.push({ ...line, projVal, edge, hasEdge });
+                    playerEdges.push({ stat: statKey, statLabel: projLine.stat, point: propData.point, price: propData.price, book: propData.book, projVal, edge, hasEdge });
                   }
                 }
                 return (
@@ -429,10 +443,7 @@ function GameDetailModal({ game, sport, isPremium, onClose }) {
                     </div>
                     <div style={{ display:"flex", gap:"8px", flexWrap:"wrap" }}>
                       {p.lines.map((l, li) => {
-                        const matchedEdge = playerEdges.find(e => {
-                          const statMap = { "player_points":"pts","player_rebounds":"reb","player_assists":"ast","player_pass_yds":"pyds","player_rush_yds":"ryds","player_strikeouts":"so","player_home_runs":"hr","player_goals":"g","player_shots_on_goal":"sog" };
-                          return statMap[e.stat] === l.stat?.toLowerCase() || l.stat?.toLowerCase().includes(statMap[e.stat] || "___");
-                        });
+                        const matchedEdge = playerEdges.find(e => e.statLabel === l.stat);
                         const hasLineEdge = matchedEdge?.hasEdge;
                         return (
                           <div key={li} style={{ background: hasLineEdge ? "rgba(200,245,74,0.08)" : "rgba(255,255,255,0.04)", borderRadius:"8px", padding:"6px 10px", textAlign:"center", minWidth:"68px", border: hasLineEdge ? "1px solid rgba(200,245,74,0.2)" : "none" }}>
@@ -441,7 +452,7 @@ function GameDetailModal({ game, sport, isPremium, onClose }) {
                             {matchedEdge && (
                               <div style={{ fontSize:"9px", color:"#555", marginTop:"2px" }}>
                                 Line: {matchedEdge.point}
-                                {hasLineEdge && <span style={{ color:"#c8f54a", marginLeft:"4px" }}>{matchedEdge.edge > 0 ? "+" : ""}{matchedEdge.edge}</span>}
+                                {hasLineEdge && <span style={{ color:"#c8f54a", marginLeft:"4px" }}>{matchedEdge.edge > 0 ? "+" : ""}{matchedEdge.edge} ⚡</span>}
                               </div>
                             )}
                           </div>
