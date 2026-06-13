@@ -40,7 +40,7 @@ const {useState,useEffect,useCallback,useRef,useMemo}=React;
 </script>
 <script>
 // Fetch all JSX files and compile together as one inline babel script
-const JSX=['/re-ui.js','/re-sport-nfl.js','/re-sport-nba.js','/re-sport-mlb.js','/re-sport-nhl.js','/re-sport-soccer.js','/re-sport-other.js','/re-dashboard.js','/re-app.js'];
+const JSX=['/re-ui.js','/re-sport-nfl.js','/re-sport-nba.js','/re-sport-mlb.js','/re-sport-nhl.js','/re-sport-soccer.js','/re-sport-other.js','/re-dashboard.js','/re-calibration.js','/re-app.js'];
 Promise.all(JSX.map(f=>fetch(f).then(r=>r.text())))
   .then(codes=>{
     const s=document.createElement('script');
