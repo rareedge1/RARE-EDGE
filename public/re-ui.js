@@ -166,6 +166,34 @@ function GameDetailModal({ game, sport, isPremium, onClose }) {
     }).catch(() => setPlayers(staticPlayers));
   }, [game, sport]);
 
+  // Fetch live prop lines from Odds API
+  useEffect(() => {
+    if (!isPremium || !game.id) return;
+    const sp = sport || game.sportLabel?.toLowerCase();
+    fetchProps(sp, game.id).then(data => {
+      if (!data) return;
+      const lines = {};
+      for (const bookmaker of data.bookmakers || []) {
+        for (const market of bookmaker.markets || []) {
+          for (const outcome of market.outcomes || []) {
+            const key = `${outcome.description}:${market.key}`;
+            if (!lines[key] || (outcome.point != null && lines[key].point == null)) {
+              lines[key] = {
+                player: outcome.description,
+                stat: market.key,
+                point: outcome.point,
+                price: outcome.price,
+                name: outcome.name,
+                book: bookmaker.title,
+              };
+            }
+          }
+        }
+      }
+      setPropLines(lines);
+    }).catch(() => {});
+  }, [game.id, isPremium]);
+
   // Project based on sport
   const proj = (() => {
     if (sport === "nfl" || sport === "ncaaf" || sport === "ufl") {
@@ -351,28 +379,78 @@ function GameDetailModal({ game, sport, isPremium, onClose }) {
 
           {tab === "players" && (
             <div>
-              {players.length === 0 ? (
+              {!isPremium && (
+                <div style={{ textAlign:"center", padding:"30px" }}>
+                  <div style={{ fontSize:"32px", marginBottom:"12px" }}>🔒</div>
+                  <div style={{ fontSize:"14px", color:"#666", marginBottom:"16px" }}>Player prop edges require Premium</div>
+                  <button onClick={() => startCheckout("monthly")} style={{ ...S.btn, width:"auto", padding:"10px 24px" }}>⚡ UPGRADE →</button>
+                </div>
+              )}
+              {isPremium && players.length === 0 && (
                 <div style={{ textAlign:"center", padding:"30px", color:"#444", fontSize:"13px" }}>No player projections for this matchup.</div>
-              ) : players.map((p, pi) => (
-                <div key={pi} style={{ background:"rgba(255,255,255,0.02)", border:"1px solid rgba(255,255,255,0.07)", borderRadius:"10px", padding:"12px", marginBottom:"10px" }}>
-                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"10px" }}>
-                    <div>
-                      <div style={{ fontSize:"13px", color:"#ccc", fontWeight:"600" }}>{p.name}</div>
-                      <div style={{ fontSize:"10px", color:"#444" }}>{p.team}</div>
+              )}
+              {isPremium && players.map((p, pi) => {
+                // Find prop lines for this player
+                const playerEdges = [];
+                for (const [key, line] of Object.entries(propLines)) {
+                  if (!key.startsWith(p.name + ":") && !key.includes(":" + p.name)) continue;
+                  if (line.name !== "Over" || line.point == null) continue;
+                  // Find our projection for this stat
+                  const statMap = {
+                    "player_points": "pts", "player_rebounds": "reb", "player_assists": "ast",
+                    "player_pass_yds": "pyds", "player_rush_yds": "ryds", "player_reception_yds": "ryds_r",
+                    "player_strikeouts": "so", "player_home_runs": "hr",
+                    "player_goals": "g", "player_shots_on_goal": "sog",
+                  };
+                  const projKey = statMap[line.stat];
+                  const projVal = projKey ? parseFloat(p.lines.find(l => l.stat?.toLowerCase().includes(projKey) || projKey.includes(l.stat?.toLowerCase()))?.proj || 0) : 0;
+                  if (projVal > 0) {
+                    const edge = +(projVal - line.point).toFixed(1);
+                    const hasEdge = Math.abs(edge) >= 1.5;
+                    playerEdges.push({ ...line, projVal, edge, hasEdge });
+                  }
+                }
+                return (
+                  <div key={pi} style={{ background: playerEdges.some(e => e.hasEdge) ? "rgba(200,245,74,0.03)" : "rgba(255,255,255,0.02)", border: playerEdges.some(e => e.hasEdge) ? "1px solid rgba(200,245,74,0.2)" : "1px solid rgba(255,255,255,0.07)", borderRadius:"10px", padding:"12px", marginBottom:"10px" }}>
+                    {playerEdges.some(e => e.hasEdge) && (
+                      <div style={{ fontSize:"9px", color:"#c8f54a", letterSpacing:"2px", fontWeight:"700", marginBottom:"8px" }}>⚡ PROP EDGE DETECTED</div>
+                    )}
+                    <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"10px" }}>
+                      <div>
+                        <div style={{ fontSize:"13px", color:"#ccc", fontWeight:"600" }}>{p.name}</div>
+                        <div style={{ fontSize:"10px", color:"#444" }}>{p.team}</div>
+                      </div>
+                      <div style={{ background: p.injured ? "rgba(239,68,68,0.1)" : "rgba(200,245,74,0.1)", borderRadius:"10px", padding:"2px 10px", fontSize:"10px", color: p.injured ? "#ef4444" : "#c8f54a", fontWeight:"700" }}>{p.rec}</div>
                     </div>
-                    <div style={{ background: p.injured ? "rgba(239,68,68,0.1)" : "rgba(200,245,74,0.1)", borderRadius:"10px", padding:"2px 10px", fontSize:"10px", color: p.injured ? "#ef4444" : "#c8f54a", fontWeight:"700" }}>{p.rec}</div>
-                  </div>
-                  <div style={{ display:"flex", gap:"8px", flexWrap:"wrap" }}>
-                    {p.lines.map((l, li) => (
-                      <div key={li} style={{ background:"rgba(255,255,255,0.04)", borderRadius:"8px", padding:"6px 10px", textAlign:"center", minWidth:"68px" }}>
-                        <div style={{ fontSize:"9px", color:"#444", letterSpacing:"1px", marginBottom:"2px" }}>{l.stat}</div>
-                        <div style={{ fontFamily:"'Bebas Neue',cursive", fontSize:"18px", color:"#c8f54a" }}>{l.proj}</div>
-                        {l.line != null && <div style={{ fontSize:"9px", color:"#333", marginTop:"2px" }}>Line: {l.line}</div>}
+                    <div style={{ display:"flex", gap:"8px", flexWrap:"wrap" }}>
+                      {p.lines.map((l, li) => {
+                        const matchedEdge = playerEdges.find(e => {
+                          const statMap = { "player_points":"pts","player_rebounds":"reb","player_assists":"ast","player_pass_yds":"pyds","player_rush_yds":"ryds","player_strikeouts":"so","player_home_runs":"hr","player_goals":"g","player_shots_on_goal":"sog" };
+                          return statMap[e.stat] === l.stat?.toLowerCase() || l.stat?.toLowerCase().includes(statMap[e.stat] || "___");
+                        });
+                        const hasLineEdge = matchedEdge?.hasEdge;
+                        return (
+                          <div key={li} style={{ background: hasLineEdge ? "rgba(200,245,74,0.08)" : "rgba(255,255,255,0.04)", borderRadius:"8px", padding:"6px 10px", textAlign:"center", minWidth:"68px", border: hasLineEdge ? "1px solid rgba(200,245,74,0.2)" : "none" }}>
+                            <div style={{ fontSize:"9px", color: hasLineEdge ? "#c8f54a" : "#444", letterSpacing:"1px", marginBottom:"2px" }}>{l.stat}</div>
+                            <div style={{ fontFamily:"'Bebas Neue',cursive", fontSize:"18px", color: hasLineEdge ? "#c8f54a" : "#aaa" }}>{l.proj}</div>
+                            {matchedEdge && (
+                              <div style={{ fontSize:"9px", color:"#555", marginTop:"2px" }}>
+                                Line: {matchedEdge.point}
+                                {hasLineEdge && <span style={{ color:"#c8f54a", marginLeft:"4px" }}>{matchedEdge.edge > 0 ? "+" : ""}{matchedEdge.edge}</span>}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {playerEdges.filter(e => e.hasEdge).map((e, ei) => (
+                      <div key={ei} style={{ marginTop:"8px", padding:"6px 10px", background:"rgba(200,245,74,0.06)", borderRadius:"6px", fontSize:"11px", color:"#c8f54a" }}>
+                        🎯 {e.projVal} proj vs {e.point} line — bet the {e.edge > 0 ? "OVER" : "UNDER"} · {e.book}
                       </div>
                     ))}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
