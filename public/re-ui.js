@@ -169,7 +169,12 @@ function GameDetailModal({ game, sport, isPremium, onClose }) {
   // Fetch live prop lines from Odds API
   useEffect(() => {
     if (!isPremium || !game.id) return;
-    const sp = sport || game.sportLabel?.toLowerCase();
+    // Map sport label to short key for fetchProps
+    const labelMap = {
+      "nfl":"nfl","nba":"nba","wnba":"wnba","mlb":"mlb","nhl":"nhl",
+      "ncaaf":"ncaaf","ncaab":"ncaab",
+    };
+    const sp = sport || labelMap[game.sportLabel?.toLowerCase()] || game.sportLabel?.toLowerCase();
     fetchProps(sp, game.id).then(data => {
       if (!data) return;
       const lines = {};

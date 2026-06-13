@@ -98,18 +98,35 @@ function parseGame(g, sportLabel) {
 
 // Fetch player props for a game
 async function fetchProps(sport, gameId) {
-  const mktMap = {
-    "nfl":   "player_pass_tds,player_rush_yds,player_reception_yds,player_anytime_td",
-    "nba":   "player_points,player_rebounds,player_assists,player_threes",
-    "wnba":  "player_points,player_rebounds,player_assists",
-    "nhl":   "player_goals,player_assists,player_shots_on_goal",
-    "mlb":   "player_strikeouts,player_hits,player_home_runs",
-    "ncaaf": "player_pass_tds,player_rush_yds,player_reception_yds",
+  if (!gameId) return null;
+  // Map short sport keys to full Odds API sport keys
+  const sportKeyMap = {
+    "nfl":   "americanfootball_nfl",
+    "nba":   "basketball_nba",
+    "wnba":  "basketball_wnba",
+    "mlb":   "baseball_mlb",
+    "nhl":   "hockey_nhl",
+    "ncaaf": "americanfootball_ncaaf",
+    "ncaab": "basketball_ncaab",
   };
-  const mkt = mktMap[sport] || "player_points";
-  const r = await fetch(`${API_BASE}?sport=${sport}&gameId=${gameId}&type=props&markets=${mkt}`);
-  if (!r.ok) return null;
-  return r.json();
+  const sportKey = sportKeyMap[sport?.toLowerCase()] || sport;
+
+  // Markets by sport
+  const mktMap = {
+    "americanfootball_nfl":  "player_pass_tds,player_rush_yds,player_reception_yds,player_anytime_td",
+    "basketball_nba":        "player_points,player_rebounds,player_assists,player_threes",
+    "basketball_wnba":       "player_points,player_rebounds,player_assists",
+    "hockey_nhl":            "player_goals,player_assists,player_shots_on_goal",
+    "baseball_mlb":          "player_strikeouts,player_hits,player_home_runs",
+    "americanfootball_ncaaf":"player_pass_tds,player_rush_yds,player_reception_yds",
+  };
+  const mkt = mktMap[sportKey] || "player_points";
+
+  try {
+    const r = await fetch(`${API_BASE}?sport=${sportKey}&gameId=${encodeURIComponent(gameId)}&type=props&markets=${encodeURIComponent(mkt)}`);
+    if (!r.ok) return null;
+    return r.json();
+  } catch(e) { return null; }
 }
 
 // Soccer odds
