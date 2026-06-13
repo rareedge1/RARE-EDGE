@@ -331,6 +331,7 @@ function DashboardTab({ isPremium }) {
         home: s.home_team,
         away: s.away_team,
         rawStart: s.commence_time,
+        gameDate: new Date(s.commence_time).toLocaleDateString("en-US", { timeZone: tz }),
         time: new Date(s.commence_time).toLocaleString("en-US", { timeZone: tz }),
         sportLabel: DASH_SPORTS.find(d => (scores[d.id] || []).some(x => x.id === s.id))?.label || "MLB",
         completed: true,
@@ -410,7 +411,7 @@ function DashboardTab({ isPremium }) {
     const sel = selectedDate.toLocaleDateString("en-US", { timeZone: tz });
     return allGames
       .filter(g => {
-        const gDate = new Date(g.rawStart).toLocaleDateString("en-US", { timeZone: tz });
+        const gDate = g.gameDate || new Date(g.rawStart).toLocaleDateString("en-US", { timeZone: tz });
         return gDate === sel;
       })
       .filter(g => {
