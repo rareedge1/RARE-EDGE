@@ -386,7 +386,12 @@ function DashboardTab({ isPremium }) {
           .catch(() => [])
       )
     ).then(results => {
-      const games = results.flat();
+      const now = Date.now();
+      const games = results.flat().filter(g => {
+        // Keep games that started within last 36 hours or are in the future
+        const start = new Date(g.rawStart).getTime();
+        return (now - start) < 36 * 60 * 60 * 1000;
+      });
       setOddsGames(games);
       // Save line snapshots for movement tracking
       if (oddsGames.length > 0) {
