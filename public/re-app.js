@@ -250,6 +250,56 @@ function RareEdge() {
   };
 
   const isPremium = user?.plan === "premium";
+  const [pushEnabled, setPushEnabled] = useState(false);
+
+  // Register service worker and check push status
+  useEffect(() => {
+    if (!isPremium) return;
+    if ("serviceWorker" in navigator && "PushManager" in window) {
+      navigator.serviceWorker.register("/sw.js")
+        .then(reg => {
+          reg.pushManager.getSubscription().then(sub => {
+            setPushEnabled(!!sub);
+          });
+        })
+        .catch(() => {});
+    }
+  }, [isPremium]);
+
+  const handlePushToggle = async () => {
+    if (!isPremium || !user?.email) return;
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const existing = await reg.pushManager.getSubscription();
+
+      if (existing) {
+        // Unsubscribe
+        await existing.unsubscribe();
+        await fetch("/api/push", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: user.email })
+        });
+        setPushEnabled(false);
+      } else {
+        // Subscribe
+        const keyRes = await fetch("/api/push");
+        const { publicKey } = await keyRes.json();
+        const sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: publicKey
+        });
+        await fetch("/api/push", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "subscribe", email: user.email, subscription: sub.toJSON() })
+        });
+        setPushEnabled(true);
+      }
+    } catch(e) {
+      alert("Push notifications not supported on this device.");
+    }
+  };
 
   const tabs = [
     { id:"dashboard",        label:"Dashboard",       emoji:"📊" },
@@ -329,6 +379,11 @@ function RareEdge() {
                 {isPremium && (
                   <button onClick={handleManageSubscription} style={{ width:"100%", padding:"10px", background:"rgba(200,245,74,0.08)", border:"1px solid rgba(200,245,74,0.2)", borderRadius:"8px", color:"#c8f54a", fontSize:"13px", fontWeight:"600", cursor:"pointer", fontFamily:"inherit", marginBottom:"8px" }}>
                     Manage Subscription
+                  </button>
+                )}
+                {isPremium && "serviceWorker" in navigator && (
+                  <button onClick={handlePushToggle} style={{ width:"100%", padding:"10px", background: pushEnabled ? "rgba(200,245,74,0.08)" : "rgba(255,255,255,0.04)", border: pushEnabled ? "1px solid rgba(200,245,74,0.2)" : "1px solid rgba(255,255,255,0.08)", borderRadius:"8px", color: pushEnabled ? "#c8f54a" : "#666", fontSize:"13px", fontWeight:"600", cursor:"pointer", fontFamily:"inherit", marginBottom:"8px" }}>
+                    {pushEnabled ? "🔔 Notifications On" : "🔕 Enable Notifications"}
                   </button>
                 )}
                 {!isPremium && (
