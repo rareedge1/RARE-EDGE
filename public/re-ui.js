@@ -395,12 +395,13 @@ function GameDetailModal({ game, sport, isPremium, onClose }) {
               {isPremium && players.length === 0 && (
                 <div style={{ textAlign:"center", padding:"30px", color:"#444", fontSize:"13px" }}>No player projections for this matchup.</div>
               )}
-              {isPremium && players.map((p, pi) => {
+              {isPremium && (players || []).map((p, pi) => {
+                if (!p) return null;
                 // Find prop lines for this player using flexible name matching
                 const playerEdges = [];
                 const pNameLower = p.name?.toLowerCase().trim();
                 // Try to find player in propLines by full name or last name match
-                const propKey = Object.keys(propLines).find(k => {
+                const propKey = Object.keys(propLines || {}).find(k => {
                   if (k === pNameLower) return true;
                   const parts = pNameLower?.split(" ");
                   const lastName = parts?.[parts.length - 1];
@@ -417,8 +418,9 @@ function GameDetailModal({ game, sport, isPremium, onClose }) {
                   "player_assists_rebounds": ["reb","REB"],
                 };
 
-                if (playerProps) {
+                if (playerProps && typeof playerProps === "object") {
                   for (const [statKey, propData] of Object.entries(playerProps)) {
+                    if (!propData) continue;
                     const statAliases = statMap[statKey] || [];
                     const projLine = p.lines.find(l => statAliases.some(a => l.stat?.toUpperCase() === a.toUpperCase()));
                     if (!projLine) continue;
