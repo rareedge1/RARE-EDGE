@@ -68,7 +68,10 @@ function DashboardCard({ game, isPremium, index, scoreData, mlbLive, movement, e
     if (s.id === game.id) return true;
     const hMatch = s.home_team === game.home || s.home_team?.includes(game.home?.split(" ").pop()) || game.home?.includes(s.home_team?.split(" ").pop());
     const aMatch = s.away_team === game.away || s.away_team?.includes(game.away?.split(" ").pop()) || game.away?.includes(s.away_team?.split(" ").pop());
-    return hMatch && aMatch;
+    if (!hMatch || !aMatch) return false;
+    // Only match if game times are within 4 hours of each other
+    const timeDiff = Math.abs(new Date(s.commence_time) - new Date(game.rawStart));
+    return timeDiff < 4 * 60 * 60 * 1000;
   });
   const isLive  = score?.completed === false && score?.scores?.length > 0;
   const isFinal = score?.completed === true || game.completed === true;
@@ -319,6 +322,7 @@ function DashboardTab({ isPremium }) {
     const scored = allScores
       .filter(s => s.completed)
       .filter(s => {
+        // Only merge completed games - date filtering handled by display useMemo
         const gStr = new Date(s.commence_time).toLocaleDateString("en-US", { timeZone: tz });
         return gStr === todayStr || gStr === yesterdayStr;
       })
@@ -412,7 +416,14 @@ function DashboardTab({ isPremium }) {
     return allGames
       .filter(g => {
         const gDate = g.gameDate || new Date(g.rawStart).toLocaleDateString("en-US", { timeZone: tz });
-        return gDate === sel;
+        if (gDate !== sel) return false;
+        // Extra check: if viewing Today, exclude completed games from yesterday
+        if (sel === new Date().toLocaleDateString("en-US", { timeZone: tz })) {
+          const yest = new Date(); yest.setDate(yest.getDate() - 1);
+          const yStr = yest.toLocaleDateString("en-US", { timeZone: tz });
+          if (gDate === yStr) return false;
+        }
+        return true;
       })
       .filter(g => {
         if (filter === "all") return true;
