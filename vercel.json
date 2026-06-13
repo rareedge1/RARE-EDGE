@@ -3,6 +3,7 @@
   "outputDirectory": "public",
   "rewrites": [
     { "source": "/api/odds", "destination": "/api/odds.js" },
+    { "source": "/api/track-record", "destination": "/api/track-record.js" },
     { "source": "/api/checkout", "destination": "/api/checkout.js" },
     { "source": "/api/scores", "destination": "/api/scores.js" },
     { "source": "/re-config.js", "destination": "/re-config.js" },
