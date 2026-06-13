@@ -1,3 +1,93 @@
+// ── LANDING PAGE — shown to logged-out users ─────────────────
+function LandingPage({ onSignUp, onSignIn }) {
+  const [record, setRecord] = useState(null);
+
+  useEffect(() => {
+    fetch("/api/track-record")
+      .then(r => r.json())
+      .then(calls => {
+        if (!Array.isArray(calls)) return;
+        const resolved = calls.filter(c => c.result === "win" || c.result === "loss" || c.result === "push");
+        const wins   = resolved.filter(c => c.result === "win").length;
+        const losses = resolved.filter(c => c.result === "loss").length;
+        const hitRate = (wins + losses) > 0 ? Math.round(wins / (wins + losses) * 100) : 0;
+        const netUnits = +((wins * 0.909) - (losses * 1.0)).toFixed(2);
+        const recent = calls.slice(0, 5);
+        setRecord({ wins, losses, hitRate, netUnits, recent });
+      }).catch(() => {});
+  }, []);
+
+  return (
+    <div style={{ minHeight:"100vh", background:"#080810", color:"#fff", fontFamily:"'DM Sans',sans-serif", padding:"0 0 48px" }}>
+      {/* Header */}
+      <div style={{ textAlign:"center", padding:"40px 20px 24px" }}>
+        <div style={{ fontFamily:"'Permanent Marker',cursive", fontSize:"36px", background:"linear-gradient(135deg,#c8f54a,#8fdb00)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", marginBottom:"8px" }}>RARE EDGE</div>
+        <div style={{ fontSize:"12px", color:"#444", letterSpacing:"3px", textTransform:"uppercase" }}>Sports Betting Intelligence</div>
+      </div>
+
+      <div style={{ maxWidth:"480px", margin:"0 auto", padding:"0 16px" }}>
+
+        {/* Live track record */}
+        {record && (
+          <div style={{ background:"rgba(200,245,74,0.04)", border:"1px solid rgba(200,245,74,0.15)", borderRadius:"16px", padding:"20px", marginBottom:"20px", textAlign:"center" }}>
+            <div style={{ fontSize:"10px", color:"#555", letterSpacing:"3px", textTransform:"uppercase", marginBottom:"16px" }}>⚡ Live Track Record</div>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:"12px", marginBottom:"16px" }}>
+              <div><div style={{ fontFamily:"'Bebas Neue',cursive", fontSize:"44px", color:"#c8f54a", lineHeight:1 }}>{record.wins}</div><div style={{ fontSize:"10px", color:"#555", letterSpacing:"1px" }}>WINS</div></div>
+              <div><div style={{ fontFamily:"'Bebas Neue',cursive", fontSize:"44px", color:"#ef4444", lineHeight:1 }}>{record.losses}</div><div style={{ fontSize:"10px", color:"#555", letterSpacing:"1px" }}>LOSSES</div></div>
+              <div><div style={{ fontFamily:"'Bebas Neue',cursive", fontSize:"44px", color: record.hitRate >= 55 ? "#c8f54a" : "#aaa", lineHeight:1 }}>{record.hitRate}%</div><div style={{ fontSize:"10px", color:"#555", letterSpacing:"1px" }}>HIT RATE</div></div>
+            </div>
+            <div style={{ fontSize:"12px", color:"#555" }}>
+              {record.netUnits >= 0 ? "+" : ""}{record.netUnits}u ROI · 1 unit flat betting @ -110
+            </div>
+          </div>
+        )}
+
+        {/* Recent calls */}
+        {record?.recent?.length > 0 && (
+          <div style={{ marginBottom:"20px" }}>
+            <div style={{ fontSize:"10px", color:"#555", letterSpacing:"2px", textTransform:"uppercase", marginBottom:"10px" }}>Recent Calls</div>
+            {record.recent.map((c, i) => (
+              <div key={i} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"10px 12px", marginBottom:"6px", background:"rgba(255,255,255,0.02)", border:"1px solid rgba(255,255,255,0.06)", borderRadius:"10px" }}>
+                <div>
+                  <div style={{ fontSize:"9px", color:"#444", letterSpacing:"1px", textTransform:"uppercase", marginBottom:"2px" }}>{c.sport}</div>
+                  <div style={{ fontSize:"13px", color:"#ccc" }}>{c.away} @ {c.home}</div>
+                </div>
+                <div style={{ fontSize:"11px", fontWeight:"700", padding:"3px 10px", borderRadius:"20px", background: c.result === "win" ? "rgba(200,245,74,0.12)" : c.result === "loss" ? "rgba(239,68,68,0.12)" : "rgba(255,255,255,0.06)", color: c.result === "win" ? "#c8f54a" : c.result === "loss" ? "#ef4444" : "#666" }}>
+                  {c.result === "win" ? "✓ WIN" : c.result === "loss" ? "✗ LOSS" : c.result === "push" ? "PUSH" : "LIVE"}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Sign up CTA */}
+        <div style={{ background:"rgba(200,245,74,0.06)", border:"1px solid rgba(200,245,74,0.15)", borderRadius:"14px", padding:"24px", textAlign:"center", marginBottom:"16px" }}>
+          <div style={{ fontFamily:"'Bebas Neue',cursive", fontSize:"28px", color:"#c8f54a", letterSpacing:"2px", marginBottom:"8px" }}>GET THE EDGE</div>
+          <div style={{ fontSize:"13px", color:"#666", marginBottom:"20px" }}>Free account. Edge alerts. Real-time analysis across 16 sports.</div>
+          <button onClick={onSignUp} style={{ width:"100%", padding:"14px", background:"linear-gradient(135deg,#c8f54a,#8fdb00)", border:"none", borderRadius:"10px", cursor:"pointer", fontFamily:"'Bebas Neue',cursive", fontSize:"20px", letterSpacing:"3px", color:"#000", marginBottom:"12px" }}>
+            CREATE FREE ACCOUNT →
+          </button>
+          <div style={{ fontSize:"13px", color:"#444" }}>
+            Already have an account?{" "}
+            <span onClick={onSignIn} style={{ color:"#c8f54a", cursor:"pointer", fontWeight:"600" }}>Sign In</span>
+          </div>
+        </div>
+
+        {/* Features */}
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"10px" }}>
+          {[["⚡","Edge Detection","AI-powered edge calls across MLB, NBA, WNBA, NFL & more"],["📊","Live Calibration","Real-time model performance tracking"],["🔔","Push Alerts","Get notified before game time"],["🏆","Line Shopping","Best available lines across all books"]].map(([icon, title, desc]) => (
+            <div key={title} style={{ background:"rgba(255,255,255,0.02)", border:"1px solid rgba(255,255,255,0.06)", borderRadius:"10px", padding:"14px" }}>
+              <div style={{ fontSize:"20px", marginBottom:"6px" }}>{icon}</div>
+              <div style={{ fontSize:"12px", color:"#ccc", fontWeight:"600", marginBottom:"4px" }}>{title}</div>
+              <div style={{ fontSize:"11px", color:"#444", lineHeight:"1.4" }}>{desc}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── SIGNUP MODAL ─────────────────────────────────────────────
 function SignupModal({ onComplete, onSwitchToLogin }) {
   const [name, setName]       = useState("");
@@ -325,9 +415,15 @@ function RareEdge() {
 
   return (
     <div style={{ minHeight:"100vh", background:"#080810", color:"#fff", fontFamily:"'DM Sans',sans-serif" }}>
-      {/* Modals */}
-      {showSignup && !showSignIn && (
-        <SignupModal onComplete={handleSignupDone} onSwitchToLogin={() => { setShowSignup(false); setShowSignIn(true); }} />
+      {/* Landing page for logged-out users */}
+      {showSignup && !showSignIn && !user && (
+        <LandingPage
+          onSignUp={() => { setShowSignup(false); setShowSignIn(false); setShowOnboarding(false); setTimeout(() => { const el = document.getElementById("re-show-signup"); if(el) el.click(); }, 50); }}
+          onSignIn={() => { setShowSignup(false); setShowSignIn(true); }}
+        />
+      )}
+      {!showSignup && !showSignIn && !user && (
+        <SignupModal onComplete={handleSignupDone} onSwitchToLogin={() => { setShowSignIn(true); }} />
       )}
       {showSignIn && (
         <SignInModal
@@ -337,6 +433,7 @@ function RareEdge() {
         />
       )}
       {showOnboarding && <OnboardingFlow onComplete={handleOnboardingDone} />}
+      <button id="re-show-signup" style={{ display:"none" }} onClick={() => { setShowSignup(false); }} />
 
       {/* Header */}
       <div style={{ position:"sticky", top:0, zIndex:100, background:"rgba(8,8,16,0.95)", backdropFilter:"blur(20px)", borderBottom:"1px solid rgba(255,255,255,0.06)", padding:"12px 16px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
