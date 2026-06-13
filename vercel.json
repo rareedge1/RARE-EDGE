@@ -1,0 +1,31 @@
+{
+  "version": 2,
+  "outputDirectory": "public",
+  "rewrites": [
+    { "source": "/api/odds", "destination": "/api/odds.js" },
+    { "source": "/api/checkout", "destination": "/api/checkout.js" },
+    { "source": "/api/scores", "destination": "/api/scores.js" },
+    { "source": "/re-config.js", "destination": "/re-config.js" },
+    { "source": "/re-teams.js", "destination": "/re-teams.js" },
+    { "source": "/re-players.js", "destination": "/re-players.js" },
+    { "source": "/re-models.js", "destination": "/re-models.js" },
+    { "source": "/re-api.js", "destination": "/re-api.js" },
+    { "source": "/re-ui.js", "destination": "/re-ui.js" },
+    { "source": "/re-sport-nfl.js", "destination": "/re-sport-nfl.js" },
+    { "source": "/re-sport-nba.js", "destination": "/re-sport-nba.js" },
+    { "source": "/re-sport-mlb.js", "destination": "/re-sport-mlb.js" },
+    { "source": "/re-sport-nhl.js", "destination": "/re-sport-nhl.js" },
+    { "source": "/re-sport-soccer.js", "destination": "/re-sport-soccer.js" },
+    { "source": "/re-sport-other.js", "destination": "/re-sport-other.js" },
+    { "source": "/re-dashboard.js", "destination": "/re-dashboard.js" },
+    { "source": "/re-calibration.js", "destination": "/re-calibration.js" },
+    { "source": "/re-app.js", "destination": "/re-app.js" },
+    { "source": "/(.*)", "destination": "/app.html" }
+  ],
+  "crons": [
+    {
+      "path": "/api/email",
+      "schedule": "0 15 * * *"
+    }
+  ]
+}
