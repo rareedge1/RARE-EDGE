@@ -153,7 +153,12 @@ function projectBaseball(home, away, vegasTotal, opts = {}, liveData = null) {
     projTotal, hScore, aScore, vTotal,
     homeWin, awayWin: 100 - homeWin,
     vegasHomeWin, winProbEdge,
-    hasEdge: Math.abs(vTotal || 0) >= 1.0 || Math.abs(winProbEdge || 0) >= 5,
+    // MLB edge: require larger total discrepancy AND pitcher quality signal
+    // Raised from 1.0 to 2.0 based on calibration data showing 36% hit rate at 1.0
+    hasEdge: (Math.abs(vTotal || 0) >= 2.0) && (
+      homePitcherEra < 3.75 || awayPitcherEra < 3.75 || // at least one quality starter
+      Math.abs(vTotal || 0) >= 3.0 // or very large total discrepancy
+    ),
     runLineEdge: hScore - aScore >= 1.5 ? "HOME RL" : aScore - hScore >= 1.5 ? "AWAY RL" : null,
     pitchers: liveData ? {
       home: { name: liveData.home?.pitcher?.name || "TBD", era: homePitcherEra, grade: homePitcherGrade },
