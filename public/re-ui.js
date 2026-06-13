@@ -111,6 +111,7 @@ function GameDetailModal({ game, sport, isPremium, onClose }) {
   const [tab, setTab]           = useState("overview");
   const [players, setPlayers]   = useState([]);
   const [propLines, setPropLines] = useState({});
+  const [movement, setMovement]  = useState(null);
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
@@ -201,6 +202,16 @@ function GameDetailModal({ game, sport, isPremium, onClose }) {
       }).catch(function() {});
   }, [game.id, isPremium, sport]);
 
+  // Fetch line movement for this game
+  useEffect(function() {
+    if (!isPremium || !game.id) return;
+    fetch("/api/line-movement")
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data && data[game.id]) setMovement(data[game.id]);
+      }).catch(function() {});
+  }, [game.id, isPremium]);
+
   const proj = (function() {
     if (sport === "nfl" || sport === "ncaaf" || sport === "ufl") {
       var h = findTeam(game.home, NFL) || findTeam(game.home, UFL);
@@ -274,6 +285,50 @@ function GameDetailModal({ game, sport, isPremium, onClose }) {
                   <div style={{ fontSize:"28px", marginBottom:"8px" }}>🔒</div>
                   <div style={{ fontSize:"14px", color:"#777", marginBottom:"14px" }}>Upgrade for projections & edge detection</div>
                   <button onClick={function() { startCheckout("monthly"); }} style={{ ...S.btn, width:"auto", padding:"10px 24px", fontSize:"16px" }}>⚡ UPGRADE →</button>
+                </div>
+              )}
+
+              {isPremium && movement && movement.snapCount >= 2 && (
+                <div style={{ background: movement.isSharp ? "rgba(200,245,74,0.04)" : "rgba(255,255,255,0.02)", border: movement.isSharp ? "1px solid rgba(200,245,74,0.15)" : "1px solid rgba(255,255,255,0.07)", borderRadius:"12px", padding:"14px", marginBottom:"16px" }}>
+                  <div style={{ fontSize:"10px", color: movement.isSharp ? "#c8f54a" : "#555", letterSpacing:"2px", marginBottom:"10px" }}>
+                    {movement.isSharp ? "⚡ SHARP MONEY DETECTED" : "📊 LINE MOVEMENT"}
+                  </div>
+                  <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:"8px", marginBottom:"10px" }}>
+                    <div style={{ textAlign:"center", background:"rgba(255,255,255,0.03)", borderRadius:"8px", padding:"8px" }}>
+                      <div style={{ fontSize:"9px", color:"#444", marginBottom:"3px" }}>SPREAD MOVE</div>
+                      <div style={{ fontSize:"16px", fontWeight:"700", color: movement.spreadMove === null ? "#333" : movement.spreadMove > 0 ? "#c8f54a" : movement.spreadMove < 0 ? "#ef4444" : "#555" }}>
+                        {movement.spreadMove === null ? "—" : (movement.spreadMove > 0 ? "+" : "") + movement.spreadMove}
+                      </div>
+                      <div style={{ fontSize:"9px", color:"#333", marginTop:"2px" }}>{movement.firstSpread != null ? movement.firstSpread : "—"} → {movement.latestSpread != null ? movement.latestSpread : "—"}</div>
+                    </div>
+                    <div style={{ textAlign:"center", background:"rgba(255,255,255,0.03)", borderRadius:"8px", padding:"8px" }}>
+                      <div style={{ fontSize:"9px", color:"#444", marginBottom:"3px" }}>TOTAL MOVE</div>
+                      <div style={{ fontSize:"16px", fontWeight:"700", color: movement.totalMove === null ? "#333" : movement.totalMove > 0 ? "#ef4444" : movement.totalMove < 0 ? "#60a5fa" : "#555" }}>
+                        {movement.totalMove === null ? "—" : (movement.totalMove > 0 ? "+" : "") + movement.totalMove}
+                      </div>
+                      <div style={{ fontSize:"9px", color:"#333", marginTop:"2px" }}>{movement.firstTotal != null ? movement.firstTotal : "—"} → {movement.latestTotal != null ? movement.latestTotal : "—"}</div>
+                    </div>
+                    <div style={{ textAlign:"center", background:"rgba(255,255,255,0.03)", borderRadius:"8px", padding:"8px" }}>
+                      <div style={{ fontSize:"9px", color:"#444", marginBottom:"3px" }}>ML MOVE</div>
+                      <div style={{ fontSize:"16px", fontWeight:"700", color: movement.mlMove === null ? "#333" : Math.abs(movement.mlMove) >= 15 ? "#c8f54a" : "#555" }}>
+                        {movement.mlMove === null ? "—" : (movement.mlMove > 0 ? "+" : "") + movement.mlMove}
+                      </div>
+                      <div style={{ fontSize:"9px", color:"#333", marginTop:"2px" }}>{movement.snapCount} snapshots</div>
+                    </div>
+                  </div>
+                  {movement.isSharp && (
+                    <div style={{ fontSize:"11px", color:"#aaa", lineHeight:"1.6", padding:"8px 10px", background:"rgba(200,245,74,0.04)", borderRadius:"8px" }}>
+                      {movement.spreadMove !== null && Math.abs(movement.spreadMove) >= 1.0 && (
+                        <div>📈 Spread moved {movement.spreadMove > 0 ? "toward " + game.away : "toward " + game.home} — sharp money on {movement.spreadMove > 0 ? game.away?.split(" ").pop() : game.home?.split(" ").pop()}</div>
+                      )}
+                      {movement.totalMove !== null && Math.abs(movement.totalMove) >= 0.5 && (
+                        <div>📉 Total moved {movement.totalMove > 0 ? "UP" : "DOWN"} — sharp money on the {movement.totalMove > 0 ? "OVER" : "UNDER"}</div>
+                      )}
+                    </div>
+                  )}
+                  {!movement.isSharp && (
+                    <div style={{ fontSize:"11px", color:"#444", lineHeight:"1.6" }}>Lines stable — no significant sharp action detected yet.</div>
+                  )}
                 </div>
               )}
               {game.books && game.books.length > 0 && (
