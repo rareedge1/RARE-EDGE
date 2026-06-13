@@ -395,90 +395,68 @@ function GameDetailModal({ game, sport, isPremium, onClose }) {
               {isPremium && players.length === 0 && (
                 <div style={{ textAlign:"center", padding:"30px", color:"#444", fontSize:"13px" }}>No player projections for this matchup.</div>
               )}
-              {isPremium && (players || []).map((p, pi) => {
-                if (!p) return null;
-                // Find prop lines for this player using flexible name matching
-                const playerEdges = [];
-                const pNameLower = p.name?.toLowerCase().trim();
-                // Try to find player in propLines by full name or last name match
-                const propKey = Object.keys(propLines || {}).find(k => {
-                  if (k === pNameLower) return true;
-                  const parts = pNameLower?.split(" ");
-                  const lastName = parts?.[parts.length - 1];
-                  return lastName && k.includes(lastName) && k.split(" ").length >= 2;
-                });
-                const playerProps = propKey ? propLines[propKey] : null;
-
-                const statMap = {
-                  "player_points": ["pts","PTS"], "player_rebounds": ["reb","REB"],
-                  "player_assists": ["ast","AST"], "player_pass_yds": ["pyds","PASS YDS"],
-                  "player_rush_yds": ["ryds","RUSH YDS"], "player_reception_yds": ["ryds_r","REC YDS"],
-                  "player_strikeouts": ["so","K's"], "player_home_runs": ["hr","HR"],
-                  "player_goals": ["g","GOALS"], "player_shots_on_goal": ["sog","SOG"],
-                  "player_assists_rebounds": ["reb","REB"],
-                };
-
-                if (playerProps && typeof playerProps === "object") {
-                  for (const [statKey, propData] of Object.entries(playerProps)) {
-                    if (!propData) continue;
-                    const statAliases = statMap[statKey] || [];
-                    const projLine = p.lines.find(l => statAliases.some(a => l.stat?.toUpperCase() === a.toUpperCase()));
+              {isPremium && players.map(function(p, pi) {
+                if (!p || !p.name) return null;
+                var propKey = null;
+                var pLower = (p.name || "").toLowerCase().trim();
+                var pLastName = pLower.split(" ").pop();
+                var propKeys = Object.keys(propLines || {});
+                for (var ki = 0; ki < propKeys.length; ki++) {
+                  var k = propKeys[ki];
+                  if (k === pLower || (pLastName && k.includes(pLastName))) { propKey = k; break; }
+                }
+                var playerProps = propKey ? propLines[propKey] : null;
+                var statMap = { "player_points":"PTS","player_rebounds":"REB","player_assists":"AST","player_pass_yds":"PASS YDS","player_rush_yds":"RUSH YDS","player_strikeouts":"K's","player_home_runs":"HR","player_goals":"GOALS","player_shots_on_goal":"SOG" };
+                var edges = [];
+                if (playerProps) {
+                  var statKeys = Object.keys(playerProps);
+                  for (var si = 0; si < statKeys.length; si++) {
+                    var statKey = statKeys[si];
+                    var propData = playerProps[statKey];
+                    if (!propData || propData.point == null) continue;
+                    var statLabel = statMap[statKey];
+                    if (!statLabel) continue;
+                    var projLine = null;
+                    for (var li2 = 0; li2 < (p.lines || []).length; li2++) {
+                      if (p.lines[li2].stat === statLabel) { projLine = p.lines[li2]; break; }
+                    }
                     if (!projLine) continue;
-                    const projVal = parseFloat(projLine.proj);
-                    if (!projVal || projVal === 0) continue;
-                    const edge = +(projVal - propData.point).toFixed(1);
-                    const hasEdge = Math.abs(edge) >= 1.5;
-                    playerEdges.push({ stat: statKey, statLabel: projLine.stat, point: propData.point, price: propData.price, book: propData.book, projVal, edge, hasEdge });
+                    var projVal = parseFloat(projLine.proj);
+                    if (!projVal) continue;
+                    var edge = +(projVal - propData.point).toFixed(1);
+                    edges.push({ statLabel: statLabel, point: propData.point, book: propData.book, projVal: projVal, edge: edge, hasEdge: Math.abs(edge) >= 1.5 });
                   }
                 }
+                var hasAnyEdge = edges.some(function(e) { return e.hasEdge; });
                 return (
-                  <div key={pi} style={{ background: playerEdges.some(e => e.hasEdge) ? "rgba(200,245,74,0.03)" : "rgba(255,255,255,0.02)", border: playerEdges.some(e => e.hasEdge) ? "1px solid rgba(200,245,74,0.2)" : "1px solid rgba(255,255,255,0.07)", borderRadius:"10px", padding:"12px", marginBottom:"10px" }}>
-                    {playerEdges.some(e => e.hasEdge) && (
-                      <div style={{ fontSize:"9px", color:"#c8f54a", letterSpacing:"2px", fontWeight:"700", marginBottom:"8px" }}>⚡ PROP EDGE DETECTED</div>
-                    )}
+                  <div key={pi} style={{ background: hasAnyEdge ? "rgba(200,245,74,0.03)" : "rgba(255,255,255,0.02)", border: hasAnyEdge ? "1px solid rgba(200,245,74,0.2)" : "1px solid rgba(255,255,255,0.07)", borderRadius:"10px", padding:"12px", marginBottom:"10px" }}>
+                    {hasAnyEdge && <div style={{ fontSize:"9px", color:"#c8f54a", letterSpacing:"2px", fontWeight:"700", marginBottom:"8px" }}>⚡ PROP EDGE DETECTED</div>}
                     <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"10px" }}>
                       <div>
                         <div style={{ fontSize:"13px", color:"#ccc", fontWeight:"600" }}>{p.name}</div>
                         <div style={{ fontSize:"10px", color:"#444" }}>{p.team}</div>
                       </div>
-                      <div style={{ background: p.injured ? "rgba(239,68,68,0.1)" : "rgba(200,245,74,0.1)", borderRadius:"10px", padding:"2px 10px", fontSize:"10px", color: p.injured ? "#ef4444" : "#c8f54a", fontWeight:"700" }}>{p.rec}</div>
+                      <div style={{ background: p.injured ? "rgba(239,68,68,0.1)" : "rgba(200,245,74,0.1)", borderRadius:"10px", padding:"2px 10px", fontSize:"10px", color: p.injured ? "#ef4444" : "#c8f54a", fontWeight:"700" }}>{p.rec || "PROJ"}</div>
                     </div>
                     <div style={{ display:"flex", gap:"8px", flexWrap:"wrap" }}>
-                      {p.lines.map((l, li) => {
-                        const matchedEdge = playerEdges.find(e => e.statLabel === l.stat);
-                        const hasLineEdge = matchedEdge?.hasEdge;
+                      {(p.lines || []).map(function(l, li) {
+                        var matchedEdge = null;
+                        for (var ei = 0; ei < edges.length; ei++) { if (edges[ei].statLabel === l.stat) { matchedEdge = edges[ei]; break; } }
                         return (
-                          <div key={li} style={{ background: hasLineEdge ? "rgba(200,245,74,0.08)" : "rgba(255,255,255,0.04)", borderRadius:"8px", padding:"6px 10px", textAlign:"center", minWidth:"68px", border: hasLineEdge ? "1px solid rgba(200,245,74,0.2)" : "none" }}>
-                            <div style={{ fontSize:"9px", color: hasLineEdge ? "#c8f54a" : "#444", letterSpacing:"1px", marginBottom:"2px" }}>{l.stat}</div>
-                            <div style={{ fontFamily:"'Bebas Neue',cursive", fontSize:"18px", color: hasLineEdge ? "#c8f54a" : "#aaa" }}>{l.proj}</div>
-                            {matchedEdge && (
-                              <div style={{ fontSize:"9px", color:"#555", marginTop:"2px" }}>
-                                Line: {matchedEdge.point}
-                                {hasLineEdge && <span style={{ color:"#c8f54a", marginLeft:"4px" }}>{matchedEdge.edge > 0 ? "+" : ""}{matchedEdge.edge} ⚡</span>}
-                              </div>
-                            )}
+                          <div key={li} style={{ background: matchedEdge?.hasEdge ? "rgba(200,245,74,0.08)" : "rgba(255,255,255,0.04)", borderRadius:"8px", padding:"6px 10px", textAlign:"center", minWidth:"68px", border: matchedEdge?.hasEdge ? "1px solid rgba(200,245,74,0.2)" : "none" }}>
+                            <div style={{ fontSize:"9px", color: matchedEdge?.hasEdge ? "#c8f54a" : "#444", letterSpacing:"1px", marginBottom:"2px" }}>{l.stat}</div>
+                            <div style={{ fontFamily:"'Bebas Neue',cursive", fontSize:"18px", color: matchedEdge?.hasEdge ? "#c8f54a" : "#aaa" }}>{l.proj}</div>
+                            {matchedEdge && <div style={{ fontSize:"9px", color:"#555", marginTop:"2px" }}>Line: {matchedEdge.point}{matchedEdge.hasEdge ? <span style={{ color:"#c8f54a", marginLeft:"4px" }}>{matchedEdge.edge > 0 ? "+" : ""}{matchedEdge.edge}⚡</span> : null}</div>}
                           </div>
                         );
                       })}
                     </div>
-                    {playerEdges.filter(e => e.hasEdge).map((e, ei) => (
-                      <div key={ei} style={{ marginTop:"8px", padding:"6px 10px", background:"rgba(200,245,74,0.06)", borderRadius:"6px", fontSize:"11px", color:"#c8f54a" }}>
-                        🎯 {e.projVal} proj vs {e.point} line — bet the {e.edge > 0 ? "OVER" : "UNDER"} · {e.book}
-                      </div>
-                    ))}
+                    {edges.filter(function(e) { return e.hasEdge; }).map(function(e, ei) {
+                      return <div key={ei} style={{ marginTop:"8px", padding:"6px 10px", background:"rgba(200,245,74,0.06)", borderRadius:"6px", fontSize:"11px", color:"#c8f54a" }}>🎯 {e.projVal} proj vs {e.point} line — bet the {e.edge > 0 ? "OVER" : "UNDER"} · {e.book}</div>;
+                    })}
                   </div>
                 );
               })}
             </div>
           )}
-        </div>
 
-        {/* Close */}
-        <div style={{ padding:"12px 20px", borderTop:"1px solid rgba(255,255,255,0.06)" }}>
-          <button onClick={onClose} style={{ width:"100%", padding:"10px", background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:"10px", color:"#666", fontSize:"13px", cursor:"pointer", fontFamily:"inherit" }}>← Back</button>
-        </div>
-      </div>
-    </div>,
-    document.body
-  );
-}
