@@ -166,7 +166,7 @@ function DashboardCard({ game, isPremium, index, scoreData, mlbLive, movement, e
         edge_type: proj?.vTotal ? "total" : "spread",
       })
     }).catch(() => {});
-  }, [hasEdge]);
+  }, [hasEdge, isFinal, homeScore, awayScore]);
 
   // Update Elo ratings when game goes final
   useEffect(() => {
@@ -184,7 +184,7 @@ function DashboardCard({ game, isPremium, index, scoreData, mlbLive, movement, e
         awayScore: parseFloat(awayScore),
       })
     }).catch(() => {});
-  }, [isFinal, homeScore, awayScore]);
+  }, [isFinal, hasEdge, homeScore, awayScore]);
 
   // Auto-update result when game is final
   useEffect(() => {
