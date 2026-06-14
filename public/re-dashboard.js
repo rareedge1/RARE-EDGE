@@ -69,9 +69,9 @@ function DashboardCard({ game, isPremium, index, scoreData, mlbLive, movement, e
     const hMatch = s.home_team === game.home || s.home_team?.includes(game.home?.split(" ").pop()) || game.home?.includes(s.home_team?.split(" ").pop());
     const aMatch = s.away_team === game.away || s.away_team?.includes(game.away?.split(" ").pop()) || game.away?.includes(s.away_team?.split(" ").pop());
     if (!hMatch || !aMatch) return false;
-    // Only match if game times are within 4 hours of each other
+    // Only match if game times are within 8 hours of each other
     const timeDiff = Math.abs(new Date(s.commence_time) - new Date(game.rawStart));
-    return timeDiff < 4 * 60 * 60 * 1000;
+    return timeDiff < 8 * 60 * 60 * 1000;
   });
   const isLive  = score?.completed === false && score?.scores?.length > 0;
   const isFinal = score?.completed === true || game.completed === true;
@@ -146,9 +146,12 @@ function DashboardCard({ game, isPremium, index, scoreData, mlbLive, movement, e
   // Auto-log edge calls to Supabase — FINAL games only
   useEffect(() => {
     if (!hasEdge || !isPremium || !isFinal || !homeScore || !awayScore) return;
-    const today = new Date().toLocaleDateString("en-US", { timeZone: "America/Chicago" });
-    const gameDate = new Date(game.rawStart).toLocaleDateString("en-US", { timeZone: "America/Chicago" });
-    if (gameDate !== today) return;
+    const tz = "America/Chicago";
+    const today = new Date().toLocaleDateString("en-US", { timeZone: tz });
+    const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toLocaleDateString("en-US", { timeZone: tz });
+    const gameDate = new Date(game.rawStart).toLocaleDateString("en-US", { timeZone: tz });
+    if (gameDate !== today && gameDate !== yesterdayStr) return;
     fetch("/api/edge-log", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -186,6 +189,12 @@ function DashboardCard({ game, isPremium, index, scoreData, mlbLive, movement, e
   // Auto-update result when game is final
   useEffect(() => {
     if (!isFinal || !hasEdge || !homeScore || !awayScore) return;
+    const tz = "America/Chicago";
+    const today2 = new Date().toLocaleDateString("en-US", { timeZone: tz });
+    const yest2 = new Date(); yest2.setDate(yest2.getDate() - 1);
+    const yesterdayStr2 = yest2.toLocaleDateString("en-US", { timeZone: tz });
+    const gameDate2 = new Date(game.rawStart).toLocaleDateString("en-US", { timeZone: tz });
+    if (gameDate2 !== today2 && gameDate2 !== yesterdayStr2) return;
     const actualTotal = parseFloat(homeScore) + parseFloat(awayScore);
     const projTotal = proj?.projTotal;
     const vegasTotal = game.vegasTotal;
@@ -370,9 +379,24 @@ function DashboardTab({ isPremium }) {
     }
   }, [oddsGames, scores]);
 
-  // Fetch live MLB data once
+  // Fetch live MLB data — retry up to 3 times
   useEffect(() => {
-    fetchMLBLive().then(data => setMlbLive(data || [])).catch(() => {});
+    let attempts = 0;
+    const tryFetch = () => {
+      fetchMLBLive()
+        .then(data => {
+          if (Array.isArray(data) && data.length > 0) {
+            setMlbLive(data);
+          } else if (attempts < 3) {
+            attempts++;
+            setTimeout(tryFetch, 3000);
+          }
+        })
+        .catch(() => {
+          if (attempts < 3) { attempts++; setTimeout(tryFetch, 3000); }
+        });
+    };
+    tryFetch();
   }, []);
 
   // Fetch line movement data every 30 mins
