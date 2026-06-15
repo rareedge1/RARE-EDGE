@@ -159,7 +159,7 @@ function DashboardCard({ game, isPremium, index, scoreData, mlbLive, movement, e
         sport: game.sportLabel,
         home: game.home,
         away: game.away,
-        game_date: today,
+        game_date: gameDate,
         proj_total: proj?.projTotal || null,
         vegas_total: game.vegasTotal || null,
         edge_value: proj?.vTotal || proj?.vSpread || null,
@@ -205,9 +205,8 @@ function DashboardCard({ game, isPremium, index, scoreData, mlbLive, movement, e
     const actualCall = actualTotal > vegasTotal ? "over" : actualTotal < vegasTotal ? "under" : "push";
     const result = actualCall === "push" ? "push" : ourCall === actualCall ? "win" : "loss";
 
-    const today = new Date().toLocaleDateString("en-US", { timeZone: "America/Chicago" });
     // Find the edge call and update it
-    fetch(`/api/edge-log?home=eq.${encodeURIComponent(game.home)}&away=eq.${encodeURIComponent(game.away)}&game_date=eq.${encodeURIComponent(today)}&select=id`)
+    fetch(`/api/edge-log?home=eq.${encodeURIComponent(game.home)}&away=eq.${encodeURIComponent(game.away)}&game_date=eq.${encodeURIComponent(gameDate2)}&select=id`)
       .then(r => r.json())
       .then(rows => {
         if (rows[0]?.id) {
