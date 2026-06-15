@@ -69,95 +69,41 @@ function formatPlayerLines(player, sport) {
   const lines = [];
   const s = player;
   if (sport === "nba" || sport === "wnba" || sport === "ncaab") {
-    if (s.pts != null && parseFloat(s.pts) > 0) lines.push({ stat:"PTS",  proj: s.pts });
-    if (s.reb != null && parseFloat(s.reb) > 0) lines.push({ stat:"REB",  proj: s.reb });
-    if (s.ast != null && parseFloat(s.ast) > 0) lines.push({ stat:"AST",  proj: s.ast });
-    if (s.stl != null && parseFloat(s.stl) > 0) lines.push({ stat:"STL",  proj: s.stl });
-    if (s.blk != null && parseFloat(s.blk) > 0) lines.push({ stat:"BLK",  proj: s.blk });
-    if (s.threes != null && parseFloat(s.threes) > 0) lines.push({ stat:"3PM", proj: s.threes });
+    if (s.pts != null && parseFloat(s.pts) > 0) lines.push({ stat:"PTS", proj: s.pts });
+    if (s.reb != null && parseFloat(s.reb) > 0) lines.push({ stat:"REB", proj: s.reb });
+    if (s.ast != null && parseFloat(s.ast) > 0) lines.push({ stat:"AST", proj: s.ast });
   } else if (sport === "nfl" || sport === "ncaaf") {
-    if (s.pyds   != null && parseFloat(s.pyds)   > 0) lines.push({ stat:"PASS YDS",    proj: s.pyds });
-    if (s.ptds   != null && parseFloat(s.ptds)   > 0) lines.push({ stat:"PASS TDS",    proj: s.ptds });
-    if (s.patt   != null && parseFloat(s.patt)   > 0) lines.push({ stat:"PASS ATT",    proj: s.patt });
-    if (s.ryds   != null && parseFloat(s.ryds)   > 0) lines.push({ stat:"RUSH YDS",    proj: s.ryds });
-    if (s.ryds_r != null && parseFloat(s.ryds_r) > 0) lines.push({ stat:"REC YDS",     proj: s.ryds_r });
-    if (s.rec    != null && parseFloat(s.rec)    > 0) lines.push({ stat:"REC",          proj: s.rec });
-    if (s.rtds   != null && parseFloat(s.rtds)   > 0) lines.push({ stat:"RUSH TDS",    proj: s.rtds });
+    if (s.pyds   != null && parseFloat(s.pyds)   > 0) lines.push({ stat:"PASS YDS", proj: s.pyds });
+    if (s.ptds   != null && parseFloat(s.ptds)   > 0) lines.push({ stat:"PASS TDS", proj: s.ptds });
+    if (s.ryds   != null && parseFloat(s.ryds)   > 0) lines.push({ stat:"RUSH YDS", proj: s.ryds });
+    if (s.ryds_r != null && parseFloat(s.ryds_r) > 0) lines.push({ stat:"REC YDS",  proj: s.ryds_r });
+    if (s.rec    != null && parseFloat(s.rec)    > 0) lines.push({ stat:"REC",       proj: s.rec });
   } else if (sport === "mlb") {
-    // Pitchers
-    if (s.so  != null && parseFloat(s.so)  > 0) lines.push({ stat:"K's",         proj: s.so   });
-    if (s.era != null && parseFloat(s.era) > 0) lines.push({ stat:"ERA",          proj: s.era  });
-    if (s.outs != null && parseFloat(s.outs) > 0) lines.push({ stat:"OUTS",       proj: s.outs });
-    // Batters
-    if (s.hits != null && parseFloat(s.hits) > 0) lines.push({ stat:"HITS",       proj: s.hits });
-    if (s.tb   != null && parseFloat(s.tb)   > 0) lines.push({ stat:"TOTAL BASES",proj: s.tb   });
-    if (s.hr   != null && parseFloat(s.hr)   > 0) lines.push({ stat:"HR",         proj: s.hr   });
-    if (s.rbi  != null && parseFloat(s.rbi)  > 0) lines.push({ stat:"RBI",        proj: s.rbi  });
-    if (s.walks != null && parseFloat(s.walks) > 0) lines.push({ stat:"WALKS",    proj: s.walks});
-    if (s.avg  != null && parseFloat(s.avg)  > 0) lines.push({ stat:"AVG",        proj: s.avg  });
+    if (s.avg != null && parseFloat(s.avg) > 0) lines.push({ stat:"AVG", proj: s.avg });
+    if (s.hr  != null && parseFloat(s.hr)  > 0) lines.push({ stat:"HR",  proj: s.hr  });
+    if (s.rbi != null && parseFloat(s.rbi) > 0) lines.push({ stat:"RBI", proj: s.rbi });
+    if (s.era != null && parseFloat(s.era) > 0) lines.push({ stat:"ERA", proj: s.era });
+    if (s.so  != null && parseFloat(s.so)  > 0) lines.push({ stat:"K's", proj: s.so  });
   } else if (sport === "nhl") {
-    if (s.g    != null && parseFloat(s.g)    > 0) lines.push({ stat:"GOALS",  proj: s.g    });
-    if (s.a    != null && parseFloat(s.a)    > 0) lines.push({ stat:"ASST",   proj: s.a    });
-    if (s.sog  != null && parseFloat(s.sog)  > 0) lines.push({ stat:"SOG",    proj: s.sog  });
-    if (s.saves != null && parseFloat(s.saves) > 0) lines.push({ stat:"SAVES", proj: s.saves});
-  } else if (sport === "mma") {
-    if (s.method  != null) lines.push({ stat:"METHOD",  proj: s.method });
-    if (s.str     != null && parseFloat(s.str) > 0) lines.push({ stat:"STR/MIN", proj: s.str });
-    if (s.td      != null && parseFloat(s.td)  > 0) lines.push({ stat:"TD/15",   proj: s.td  });
-  } else if (sport === "soccer" || sport === "epl" || sport === "mls") {
-    if (s.goals_pg  != null && parseFloat(s.goals_pg)  > 0) lines.push({ stat:"GOALS/G",  proj: s.goals_pg  });
-    if (s.ast_pg    != null && parseFloat(s.ast_pg)    > 0) lines.push({ stat:"ASST/G",   proj: s.ast_pg    });
-    if (s.shots_pg  != null && parseFloat(s.shots_pg)  > 0) lines.push({ stat:"SHOTS/G",  proj: s.shots_pg  });
+    if (s.g   != null && parseFloat(s.g)   > 0) lines.push({ stat:"GOALS", proj: s.g   });
+    if (s.a   != null && parseFloat(s.a)   > 0) lines.push({ stat:"ASST",  proj: s.a   });
+    if (s.sog != null && parseFloat(s.sog) > 0) lines.push({ stat:"SOG",   proj: s.sog });
   }
   return lines;
 }
 
 // Prop stat key -> our stat label mapping
 const PROP_STAT_MAP = {
-  // Basketball
-  "player_points":              "PTS",
-  "player_rebounds":            "REB",
-  "player_assists":             "AST",
-  "player_steals":              "STL",
-  "player_blocks":              "BLK",
-  "player_threes":              "3PM",
-  "player_points_rebounds_assists": "PRA",
-  // Football
-  "player_pass_yds":            "PASS YDS",
-  "player_pass_tds":            "PASS TDS",
-  "player_pass_attempts":       "PASS ATT",
-  "player_pass_completions":    "COMPLETIONS",
-  "player_pass_interceptions":  "INT",
-  "player_rush_yds":            "RUSH YDS",
-  "player_rush_attempts":       "RUSH ATT",
-  "player_rush_tds":            "RUSH TDS",
-  "player_reception_yds":       "REC YDS",
-  "player_receptions":          "REC",
-  "player_reception_tds":       "REC TDS",
-  // Baseball
-  "player_strikeouts":          "K's",
-  "player_home_runs":           "HR",
-  "player_hits":                "HITS",
-  "player_total_bases":         "TOTAL BASES",
-  "player_rbis":                "RBI",
-  "player_walks":               "WALKS",
-  "player_earned_runs":         "ER",
-  "player_outs":                "OUTS",
-  "pitcher_strikeouts":         "K's",
-  "batter_home_runs":           "HR",
-  "batter_hits":                "HITS",
-  "batter_total_bases":         "TOTAL BASES",
-  "batter_rbis":                "RBI",
-  "batter_walks":               "WALKS",
-  // Hockey
-  "player_goals":               "GOALS",
-  "player_assists":             "ASST",
-  "player_shots_on_goal":       "SOG",
-  "player_saves":               "SAVES",
-  "player_points_scored":       "PTS",
-  // MMA
-  "fighter_method_of_victory":  "METHOD",
-  "fighter_win":                "WIN",
+  "player_points":       "PTS",
+  "player_rebounds":     "REB",
+  "player_assists":      "AST",
+  "player_pass_yds":     "PASS YDS",
+  "player_rush_yds":     "RUSH YDS",
+  "player_reception_yds":"REC YDS",
+  "player_strikeouts":   "K's",
+  "player_home_runs":    "HR",
+  "player_goals":        "GOALS",
+  "player_shots_on_goal":"SOG",
 };
 
 // ── GAME DETAIL MODAL ────────────────────────────────────────
@@ -195,22 +141,28 @@ function GameDetailModal({ game, sport, isPremium, onClose }) {
       var awayData = results[1];
       var merge = function(liveData, staticList, team) {
         if (!liveData || !liveData.players || !liveData.players.length) return fmt(staticList, team);
-        return liveData.players.slice(0, 5).map(function(liveP) {
-          // Match by last name
+        return liveData.players.slice(0, 6).map(function(liveP) {
+          // Try last name match against static list
           var liveLast = (liveP.name || "").split(" ").pop().toLowerCase();
           var staticMatch = null;
           for (var si = 0; si < staticList.length; si++) {
             var sName = staticList[si].n || staticList[si].name || "";
             var sLast = sName.split(" ").pop().toLowerCase();
-            // Handle abbreviated names like "C. Clark" -> last name "Clark"
             var sLastFull = sName.split(" ").filter(function(p) { return p.length > 2; }).pop()?.toLowerCase() || sLast;
             if (sLast === liveLast || sLastFull === liveLast) { staticMatch = staticList[si]; break; }
+          }
+          // If live player has real stats, use them directly — no static match needed
+          var lines = [];
+          if (liveP.stats && liveP.hasStats) {
+            lines = formatPlayerLines(liveP.stats, sport);
+          } else if (staticMatch) {
+            lines = formatPlayerLines(staticMatch, sport);
           }
           return {
             name: liveP.name, team: team,
             rec: liveP.injured ? "⚠️ " + liveP.status : "PROJ",
             injured: liveP.injured,
-            lines: staticMatch ? formatPlayerLines(staticMatch, sport) : [],
+            lines: lines,
           };
         });
       };
@@ -225,16 +177,11 @@ function GameDetailModal({ game, sport, isPremium, onClose }) {
     var sportKeyMap = { nfl:"americanfootball_nfl", nba:"basketball_nba", wnba:"basketball_wnba", mlb:"baseball_mlb", nhl:"hockey_nhl", ncaaf:"americanfootball_ncaaf" };
     var sportKey = sportKeyMap[sport] || sport;
     var mktMap = {
-      "americanfootball_nfl":  "player_pass_yds,player_pass_tds,player_pass_attempts,player_pass_completions,player_pass_interceptions,player_rush_yds,player_rush_attempts,player_rush_tds,player_reception_yds,player_receptions,player_reception_tds",
-      "americanfootball_ncaaf":"player_pass_yds,player_pass_tds,player_rush_yds,player_reception_yds,player_receptions",
-      "basketball_nba":        "player_points,player_rebounds,player_assists,player_steals,player_blocks,player_threes,player_points_rebounds_assists",
-      "basketball_wnba":       "player_points,player_rebounds,player_assists,player_steals,player_blocks,player_threes",
-      "basketball_ncaab":      "player_points,player_rebounds,player_assists",
-      "hockey_nhl":            "player_goals,player_assists,player_shots_on_goal,player_saves,player_points_scored",
-      "baseball_mlb":          "batter_hits,batter_total_bases,batter_home_runs,batter_rbis,batter_walks,pitcher_strikeouts,player_earned_runs,player_outs",
-      "mma_mixed_martial_arts":"fighter_win",
-      "soccer_epl":            "player_shots_on_target,player_to_score",
-      "soccer_usa_mls":        "player_shots_on_target,player_to_score",
+      "americanfootball_nfl": "player_pass_tds,player_rush_yds,player_reception_yds",
+      "basketball_nba":       "player_points,player_rebounds,player_assists",
+      "basketball_wnba":      "player_points,player_rebounds,player_assists",
+      "hockey_nhl":           "player_goals,player_shots_on_goal",
+      "baseball_mlb":         "player_strikeouts,player_home_runs",
     };
     var mkt = mktMap[sportKey] || "player_points";
     fetch("/api/odds?sport=" + sportKey + "&gameId=" + encodeURIComponent(game.id) + "&type=props&markets=" + encodeURIComponent(mkt))
