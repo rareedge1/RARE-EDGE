@@ -147,9 +147,8 @@ function GameDetailModal({ game, sport, isPremium, onClose }) {
       var awayData = results[1];
       var merge = function(liveData, staticList, team) {
         if (!liveData || !liveData.players || !liveData.players.length) return fmt(staticList, team);
-        return liveData.players.slice(0, 6).map(function(liveP) {
-          if (!liveP || !liveP.name) return null;
-          // Try last name match against static list
+        return liveData.players.slice(0, 5).map(function(liveP) {
+          // Match by last name against static list
           var liveLast = (liveP.name || "").split(" ").pop().toLowerCase();
           var staticMatch = null;
           for (var si = 0; si < staticList.length; si++) {
@@ -158,25 +157,18 @@ function GameDetailModal({ game, sport, isPremium, onClose }) {
             var sLastFull = sName.split(" ").filter(function(p) { return p.length > 2; }).pop()?.toLowerCase() || sLast;
             if (sLast === liveLast || sLastFull === liveLast) { staticMatch = staticList[si]; break; }
           }
-          // Build lines — prefer live stats, fall back to static
-          var lines = [];
-          try {
-            if (liveP.hasStats && liveP.stats && Object.keys(liveP.stats).length > 0) {
-              // Merge live stats into a player-shaped object for formatPlayerLines
-              var merged = Object.assign({}, liveP.stats, { n: liveP.name });
-              lines = formatPlayerLines(merged, sport);
-            }
-            if (lines.length === 0 && staticMatch) {
-              lines = formatPlayerLines(staticMatch, sport);
-            }
-          } catch(e) { lines = []; }
+          // Build stat lines: prefer live stats spread onto player object, fall back to static
+          var linesSource = staticMatch || {};
+          if (liveP.hasStats && liveP.stats) {
+            linesSource = Object.assign({}, linesSource, liveP.stats);
+          }
           return {
             name: liveP.name, team: team,
             rec: liveP.injured ? "⚠️ " + liveP.status : "PROJ",
             injured: liveP.injured || false,
-            lines: lines,
+            lines: formatPlayerLines(linesSource, sport),
           };
-        }).filter(Boolean);
+        });
       };
       var merged = merge(awayData, staticAway, game.away).concat(merge(homeData, staticHome, game.home));
       setPlayers(merged.length > 0 ? merged : staticPlayers);
