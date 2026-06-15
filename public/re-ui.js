@@ -79,11 +79,17 @@ function formatPlayerLines(player, sport) {
     if (s.ryds_r != null && parseFloat(s.ryds_r) > 0) lines.push({ stat:"REC YDS",  proj: s.ryds_r });
     if (s.rec    != null && parseFloat(s.rec)    > 0) lines.push({ stat:"REC",       proj: s.rec });
   } else if (sport === "mlb") {
-    if (s.avg != null && parseFloat(s.avg) > 0) lines.push({ stat:"AVG", proj: s.avg });
-    if (s.hr  != null && parseFloat(s.hr)  > 0) lines.push({ stat:"HR",  proj: s.hr  });
-    if (s.rbi != null && parseFloat(s.rbi) > 0) lines.push({ stat:"RBI", proj: s.rbi });
-    if (s.era != null && parseFloat(s.era) > 0) lines.push({ stat:"ERA", proj: s.era });
-    if (s.so  != null && parseFloat(s.so)  > 0) lines.push({ stat:"K's", proj: s.so  });
+    // Pitchers
+    if (s.era  != null && parseFloat(s.era)  > 0) lines.push({ stat:"ERA",         proj: s.era  });
+    if (s.so   != null && parseFloat(s.so)   > 0) lines.push({ stat:"K's",         proj: s.so   });
+    if (s.outs != null && parseFloat(s.outs) > 0) lines.push({ stat:"OUTS",        proj: s.outs });
+    // Batters
+    if (s.hits  != null && parseFloat(s.hits)  > 0) lines.push({ stat:"HITS",        proj: s.hits  });
+    if (s.tb    != null && parseFloat(s.tb)    > 0) lines.push({ stat:"TOTAL BASES", proj: s.tb    });
+    if (s.hr    != null && parseFloat(s.hr)    > 0) lines.push({ stat:"HR",          proj: s.hr    });
+    if (s.rbi   != null && parseFloat(s.rbi)   > 0) lines.push({ stat:"RBI",         proj: s.rbi   });
+    if (s.walks != null && parseFloat(s.walks) > 0) lines.push({ stat:"WALKS",       proj: s.walks });
+    if (s.avg   != null && parseFloat(s.avg)   > 0) lines.push({ stat:"AVG",         proj: s.avg   });
   } else if (sport === "nhl") {
     if (s.g   != null && parseFloat(s.g)   > 0) lines.push({ stat:"GOALS", proj: s.g   });
     if (s.a   != null && parseFloat(s.a)   > 0) lines.push({ stat:"ASST",  proj: s.a   });
@@ -142,6 +148,7 @@ function GameDetailModal({ game, sport, isPremium, onClose }) {
       var merge = function(liveData, staticList, team) {
         if (!liveData || !liveData.players || !liveData.players.length) return fmt(staticList, team);
         return liveData.players.slice(0, 6).map(function(liveP) {
+          if (!liveP || !liveP.name) return null;
           // Try last name match against static list
           var liveLast = (liveP.name || "").split(" ").pop().toLowerCase();
           var staticMatch = null;
@@ -151,20 +158,25 @@ function GameDetailModal({ game, sport, isPremium, onClose }) {
             var sLastFull = sName.split(" ").filter(function(p) { return p.length > 2; }).pop()?.toLowerCase() || sLast;
             if (sLast === liveLast || sLastFull === liveLast) { staticMatch = staticList[si]; break; }
           }
-          // If live player has real stats, use them directly — no static match needed
+          // Build lines — prefer live stats, fall back to static
           var lines = [];
-          if (liveP.stats && liveP.hasStats) {
-            lines = formatPlayerLines(liveP.stats, sport);
-          } else if (staticMatch) {
-            lines = formatPlayerLines(staticMatch, sport);
-          }
+          try {
+            if (liveP.hasStats && liveP.stats && Object.keys(liveP.stats).length > 0) {
+              // Merge live stats into a player-shaped object for formatPlayerLines
+              var merged = Object.assign({}, liveP.stats, { n: liveP.name });
+              lines = formatPlayerLines(merged, sport);
+            }
+            if (lines.length === 0 && staticMatch) {
+              lines = formatPlayerLines(staticMatch, sport);
+            }
+          } catch(e) { lines = []; }
           return {
             name: liveP.name, team: team,
             rec: liveP.injured ? "⚠️ " + liveP.status : "PROJ",
-            injured: liveP.injured,
+            injured: liveP.injured || false,
             lines: lines,
           };
-        });
+        }).filter(Boolean);
       };
       var merged = merge(awayData, staticAway, game.away).concat(merge(homeData, staticHome, game.home));
       setPlayers(merged.length > 0 ? merged : staticPlayers);
