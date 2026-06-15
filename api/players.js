@@ -153,41 +153,57 @@ function extractPlayer(athlete, sport) {
 }
 
 function mapStats(raw, sport, pos) {
+  // Games played — used to convert season totals to per-game averages
+  const gp = parseFloat(raw.GP || raw.GS || raw.G || raw.gamesPlayed || 1) || 1;
+
   if (sport === "nba" || sport === "wnba") {
+    // ESPN returns per-game averages directly for NBA/WNBA
     return {
-      pts: parseFloat(raw.PTS || raw.points || 0).toFixed(1),
-      reb: parseFloat(raw.REB || raw.rebounds || raw.totalRebounds || 0).toFixed(1),
-      ast: parseFloat(raw.AST || raw.assists || 0).toFixed(1),
-      stl: parseFloat(raw.STL || raw.steals || 0).toFixed(1),
+      pts:    parseFloat(raw.PTS || raw.points || 0).toFixed(1),
+      reb:    parseFloat(raw.REB || raw.rebounds || raw.totalRebounds || 0).toFixed(1),
+      ast:    parseFloat(raw.AST || raw.assists || 0).toFixed(1),
+      stl:    parseFloat(raw.STL || raw.steals || 0).toFixed(1),
+      blk:    parseFloat(raw.BLK || raw.blocks || 0).toFixed(1),
+      threes: parseFloat(raw["3PM"] || raw.threePointFieldGoalsMade || 0).toFixed(1),
     };
   }
   if (sport === "nfl") {
     if (pos === "QB") return {
       pyds: parseFloat(raw.YDS || raw.passingYards || 0).toFixed(0),
       ptds: parseFloat(raw.TD  || raw.passingTouchdowns || 0).toFixed(1),
+      patt: parseFloat(raw.ATT || raw.passingAttempts || 0).toFixed(0),
       ryds: parseFloat(raw.RYDS || raw.rushingYards || 0).toFixed(0),
     };
     return {
       rec:    parseFloat(raw.REC || raw.receptions || 0).toFixed(1),
       ryds_r: parseFloat(raw.YDS || raw.receivingYards || 0).toFixed(0),
-      tds:    parseFloat(raw.TD  || raw.touchdowns || 0).toFixed(2),
+      rtds:   parseFloat(raw.TD  || raw.touchdowns || 0).toFixed(2),
     };
   }
   if (sport === "nhl") return {
-    g:   parseFloat(raw.G   || raw.goals || 0).toFixed(2),
+    g:   parseFloat(raw.G   || raw.goals   || 0).toFixed(2),
     a:   parseFloat(raw.A   || raw.assists || 0).toFixed(2),
     sog: parseFloat(raw.SOG || raw.shotsOnGoal || 0).toFixed(1),
   };
   if (sport === "mlb") {
-    if (["SP","RP","P"].includes(pos)) return {
-      era:  parseFloat(raw.ERA  || 0).toFixed(2),
-      so:   parseFloat(raw.SO   || raw.strikeouts || 0).toFixed(1),
-      whip: parseFloat(raw.WHIP || 0).toFixed(2),
-    };
+    // ESPN returns season totals for MLB — divide by games played for per-game
+    if (["SP","RP","P"].includes(pos)) {
+      const gs = parseFloat(raw.GS || raw.gamesStarted || gp) || 1;
+      return {
+        era:  parseFloat(raw.ERA  || 0).toFixed(2),
+        so:   (parseFloat(raw.SO  || raw.strikeouts || 0) / gs).toFixed(1),
+        outs: (parseFloat(raw.IP  || 0) * 3 / gs).toFixed(1), // innings pitched * 3 = outs
+        whip: parseFloat(raw.WHIP || 0).toFixed(2),
+      };
+    }
+    const batGP = parseFloat(raw.GP || raw.gamesPlayed || 1) || 1;
     return {
-      avg: parseFloat(raw.AVG || raw.battingAverage || 0).toFixed(3),
-      hr:  parseFloat(raw.HR  || raw.homeRuns || 0).toFixed(0),
-      rbi: parseFloat(raw.RBI || 0).toFixed(0),
+      avg:   parseFloat(raw.AVG || raw.battingAverage || 0).toFixed(3),
+      hits:  (parseFloat(raw.H   || raw.hits        || 0) / batGP).toFixed(2),
+      tb:    (parseFloat(raw.TB  || raw.totalBases  || 0) / batGP).toFixed(2),
+      hr:    (parseFloat(raw.HR  || raw.homeRuns    || 0) / batGP).toFixed(2),
+      rbi:   (parseFloat(raw.RBI || 0)                   / batGP).toFixed(2),
+      walks: (parseFloat(raw.BB  || raw.walks       || 0) / batGP).toFixed(2),
     };
   }
   return {};
