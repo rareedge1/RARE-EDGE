@@ -20,24 +20,60 @@ function removeVig(homeML, awayML) {
   };
 }
 
-// Blend model win% with Vegas implied probability
-// Vegas is more accurate so we weight it 65/35
-function blendWinProb(modelWin, vegasHomeML, vegasAwayML) {
+// Dynamic blend: model carries more weight when it strongly disagrees with Vegas
+// Sport weights — Vegas lines are softer on WNBA/NCAAB so model gets more say
+const SPORT_MODEL_WEIGHT = {
+  nfl:   0.35,
+  nba:   0.38,
+  wnba:  0.48, // Vegas WNBA lines are less sharp — model gets nearly equal say
+  mlb:   0.38,
+  nhl:   0.40,
+  ncaaf: 0.42,
+  ncaab: 0.45,
+  default: 0.38,
+};
+
+function blendWinProb(modelWin, vegasHomeML, vegasAwayML, sport) {
+  if (!vegasHomeML || !vegasAwayML) return Math.min(88, Math.max(12, Math.round(modelWin)));
   const { homeTrue } = removeVig(vegasHomeML, vegasAwayML);
-  if (!vegasHomeML || !vegasAwayML) return modelWin;
-  const blended = (modelWin * 0.35) + (homeTrue * 100 * 0.65);
+  const vegasWin = homeTrue * 100;
+
+  // Base model weight by sport
+  let modelWeight = SPORT_MODEL_WEIGHT[sport] || SPORT_MODEL_WEIGHT.default;
+
+  // Dynamic boost: if model and Vegas diverge by 10+ points, trust model more
+  const divergence = Math.abs(modelWin - vegasWin);
+  if (divergence >= 15) modelWeight = Math.min(modelWeight + 0.12, 0.60);
+  else if (divergence >= 10) modelWeight = Math.min(modelWeight + 0.07, 0.55);
+
+  const blended = (modelWin * modelWeight) + (vegasWin * (1 - modelWeight));
+
+  // Dead zone: if blended lands 48-52%, no conviction — return exactly 50
+  // so hasEdge logic can filter it out
+  if (blended >= 48 && blended <= 52) return 50;
+
   return Math.min(88, Math.max(12, Math.round(blended)));
 }
 
-// Spread to win probability (NFL/NBA standard conversion)
-function spreadToWinProb(spread) {
-  // Each point of spread ~2.8% win probability shift
-  return 50 + (spread * -2.8);
+// Sport-calibrated spread to win probability
+// Football: ~2.8% per point | Basketball: ~3.5% per point | Hockey: ~8% per goal
+function spreadToWinProb(spread, sport) {
+  const perUnit = {
+    nfl:   2.8,
+    ncaaf: 2.5,
+    nba:   3.5,
+    wnba:  3.8, // WNBA spreads are tighter, each point means more
+    ncaab: 3.2,
+    nhl:   8.0,
+    default: 3.0,
+  };
+  const rate = perUnit[sport] || perUnit.default;
+  return Math.min(85, Math.max(15, 50 + (spread * -rate)));
 }
 
 // ── FOOTBALL PROJECTION ──────────────────────────────────────
 function projectFootball(home, away, vegasSpread, vegasTotal, opts = {}) {
-  const { homeAdv = HOME_ADV, restAdj = 0, injAdj = 0, homeML, awayML } = opts;
+  const { homeAdv = HOME_ADV, restAdj = 0, injAdj = 0, homeML, awayML, sport = "nfl" } = opts;
   if (!home || !away) return null;
 
   const rawSpread = (away.off - home.def) - (home.off - away.def) + homeAdv + restAdj + injAdj;
@@ -49,15 +85,18 @@ function projectFootball(home, away, vegasSpread, vegasTotal, opts = {}) {
   const vSpread = vegasSpread ? +(projSpread - parseFloat(vegasSpread)).toFixed(1) : null;
   const vTotal  = vegasTotal  ? +(projTotal  - parseFloat(vegasTotal)).toFixed(1)  : null;
 
-  // Model win% from projected spread
-  const modelWin = spreadToWinProb(projSpread);
-  // Blend with Vegas implied if moneyline available
-  const homeWin = blendWinProb(modelWin, homeML, awayML);
+  const modelWin = spreadToWinProb(projSpread, sport);
+  const homeWin  = blendWinProb(modelWin, homeML, awayML, sport);
 
-  // Edge: our model disagrees with Vegas by meaningful amount
   const vegasHomeWin = homeML ? removeVig(homeML, awayML).homeTrue * 100 : null;
-  const winProbEdge = vegasHomeWin ? +(homeWin - vegasHomeWin).toFixed(1) : null;
-  const hasEdge = (Math.abs(vSpread || 0) >= EDGE_MIN) || (Math.abs(vTotal || 0) >= EDGE_MIN * 1.5) || (Math.abs(winProbEdge || 0) >= 5);
+  const winProbEdge  = vegasHomeWin ? +(homeWin - vegasHomeWin).toFixed(1) : null;
+
+  // No edge if model is in dead zone (50% = no conviction)
+  const hasEdge = homeWin !== 50 && (
+    (Math.abs(vSpread || 0) >= EDGE_MIN) ||
+    (Math.abs(vTotal  || 0) >= EDGE_MIN * 1.5) ||
+    (Math.abs(winProbEdge || 0) >= 6)
+  );
 
   return {
     projSpread, projTotal, vSpread, vTotal,
@@ -69,7 +108,7 @@ function projectFootball(home, away, vegasSpread, vegasTotal, opts = {}) {
 
 // ── BASKETBALL PROJECTION ────────────────────────────────────
 function projectBasketball(home, away, vegasSpread, vegasTotal, opts = {}) {
-  const { homeAdv = 3.2, b2bHome = false, b2bAway = false, homeML, awayML } = opts;
+  const { homeAdv = 3.2, b2bHome = false, b2bAway = false, homeML, awayML, sport = "nba" } = opts;
   if (!home || !away) return null;
 
   const pace = (home.pace + away.pace) / 2;
@@ -92,14 +131,17 @@ function projectBasketball(home, away, vegasSpread, vegasTotal, opts = {}) {
   const vSpread = vegasSpread ? +(projSpread - parseFloat(vegasSpread)).toFixed(1) : null;
   const vTotal  = vegasTotal  ? +(projTotal  - parseFloat(vegasTotal)).toFixed(1)  : null;
 
-  // Model win% from projected spread
-  const modelWin = spreadToWinProb(projSpread);
-  // Blend with Vegas implied probability
-  const homeWin = blendWinProb(modelWin, homeML, awayML);
+  const modelWin = spreadToWinProb(projSpread, sport);
+  const homeWin  = blendWinProb(modelWin, homeML, awayML, sport);
 
   const vegasHomeWin = homeML ? Math.round(removeVig(homeML, awayML).homeTrue * 100) : null;
-  const winProbEdge = vegasHomeWin ? +(homeWin - vegasHomeWin).toFixed(1) : null;
-  const hasEdge = (Math.abs(vSpread || 0) >= EDGE_MIN) || (Math.abs(vTotal || 0) >= EDGE_MIN * 1.5) || (Math.abs(winProbEdge || 0) >= 5);
+  const winProbEdge  = vegasHomeWin ? +(homeWin - vegasHomeWin).toFixed(1) : null;
+
+  const hasEdge = homeWin !== 50 && (
+    (Math.abs(vSpread || 0) >= EDGE_MIN) ||
+    (Math.abs(vTotal  || 0) >= EDGE_MIN * 1.5) ||
+    (Math.abs(winProbEdge || 0) >= 6)
+  );
 
   return {
     projSpread, projTotal, homeScore, awayScore, vSpread, vTotal,
@@ -138,10 +180,8 @@ function projectBaseball(home, away, vegasTotal, opts = {}, liveData = null) {
   const projTotal = +(hScore + aScore).toFixed(1);
   const vTotal    = vegasTotal ? +(projTotal - parseFloat(vegasTotal)).toFixed(1) : null;
 
-  // Model win% from run differential
   const modelWin = 50 + ((hScore - aScore) * 8);
-  // Blend with Vegas implied probability
-  const homeWin = blendWinProb(modelWin, homeML, awayML);
+  const homeWin  = blendWinProb(modelWin, homeML, awayML, "mlb");
 
   const vegasHomeWin = homeML ? Math.round(removeVig(homeML, awayML).homeTrue * 100) : null;
   const winProbEdge  = vegasHomeWin ? +(homeWin - vegasHomeWin).toFixed(1) : null;
@@ -153,11 +193,9 @@ function projectBaseball(home, away, vegasTotal, opts = {}, liveData = null) {
     projTotal, hScore, aScore, vTotal,
     homeWin, awayWin: 100 - homeWin,
     vegasHomeWin, winProbEdge,
-    // MLB edge: require larger total discrepancy AND pitcher quality signal
-    // Raised from 1.0 to 2.0 based on calibration data showing 36% hit rate at 1.0
-    hasEdge: (Math.abs(vTotal || 0) >= 2.0) && (
-      homePitcherEra < 3.75 || awayPitcherEra < 3.75 || // at least one quality starter
-      Math.abs(vTotal || 0) >= 3.0 // or very large total discrepancy
+    hasEdge: homeWin !== 50 && (Math.abs(vTotal || 0) >= 2.0) && (
+      homePitcherEra < 3.75 || awayPitcherEra < 3.75 ||
+      Math.abs(vTotal || 0) >= 3.0
     ),
     runLineEdge: hScore - aScore >= 1.5 ? "HOME RL" : aScore - hScore >= 1.5 ? "AWAY RL" : null,
     pitchers: liveData ? {
@@ -185,7 +223,7 @@ function projectHockey(home, away, vegasTotal, opts = {}) {
   const vTotal    = vegasTotal ? +(projTotal - parseFloat(vegasTotal)).toFixed(1) : null;
 
   const modelWin = 50 + ((hScore - aScore) * 12);
-  const homeWin  = blendWinProb(modelWin, homeML, awayML);
+  const homeWin  = blendWinProb(modelWin, homeML, awayML, "nhl");
 
   const vegasHomeWin = homeML ? Math.round(removeVig(homeML, awayML).homeTrue * 100) : null;
   const winProbEdge  = vegasHomeWin ? +(homeWin - vegasHomeWin).toFixed(1) : null;
@@ -194,7 +232,7 @@ function projectHockey(home, away, vegasTotal, opts = {}) {
     projTotal, hScore, aScore, vTotal,
     homeWin, awayWin: 100 - homeWin,
     vegasHomeWin, winProbEdge,
-    hasEdge: Math.abs(vTotal || 0) >= 0.5 || Math.abs(winProbEdge || 0) >= 5,
+    hasEdge: homeWin !== 50 && (Math.abs(vTotal || 0) >= 0.5 || Math.abs(winProbEdge || 0) >= 6),
   };
 }
 
