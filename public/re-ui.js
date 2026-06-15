@@ -101,7 +101,13 @@ function formatPlayerLines(player, sport) {
     if (s.sog  != null && parseFloat(s.sog)  > 0) lines.push({ stat:"SOG",    proj: s.sog  });
     if (s.saves != null && parseFloat(s.saves) > 0) lines.push({ stat:"SAVES", proj: s.saves});
   } else if (sport === "mma") {
-    if (s.method != null) lines.push({ stat:"METHOD", proj: s.method });
+    if (s.method  != null) lines.push({ stat:"METHOD",  proj: s.method });
+    if (s.str     != null && parseFloat(s.str) > 0) lines.push({ stat:"STR/MIN", proj: s.str });
+    if (s.td      != null && parseFloat(s.td)  > 0) lines.push({ stat:"TD/15",   proj: s.td  });
+  } else if (sport === "soccer" || sport === "epl" || sport === "mls") {
+    if (s.goals_pg  != null && parseFloat(s.goals_pg)  > 0) lines.push({ stat:"GOALS/G",  proj: s.goals_pg  });
+    if (s.ast_pg    != null && parseFloat(s.ast_pg)    > 0) lines.push({ stat:"ASST/G",   proj: s.ast_pg    });
+    if (s.shots_pg  != null && parseFloat(s.shots_pg)  > 0) lines.push({ stat:"SHOTS/G",  proj: s.shots_pg  });
   }
   return lines;
 }
