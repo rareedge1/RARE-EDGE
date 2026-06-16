@@ -1,3 +1,86 @@
+// ── SHARED UI COMPONENTS ─────────────────────────────────────
+
+const S = {
+  card:  { background:"rgba(255,255,255,0.02)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:"14px", padding:"18px", marginBottom:"14px" },
+  lbl:   { fontSize:"10px", color:"#555", textTransform:"uppercase", letterSpacing:"1.5px", marginBottom:"6px", display:"block" },
+  input: { width:"100%", padding:"11px 14px", borderRadius:"8px", background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.10)", color:"#fff", fontSize:"14px", fontFamily:"inherit", outline:"none", boxSizing:"border-box" },
+  sel:   { width:"100%", padding:"11px 14px", borderRadius:"8px", background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.10)", color:"#fff", fontSize:"14px", fontFamily:"inherit", outline:"none", cursor:"pointer", boxSizing:"border-box", appearance:"none" },
+  btn:   { width:"100%", padding:"13px", background:"linear-gradient(135deg,#c8f54a,#8fdb00)", border:"none", borderRadius:"10px", cursor:"pointer", fontFamily:"'Bebas Neue',cursive", fontSize:"20px", letterSpacing:"3px", color:"#000" },
+  lime:  { color:"#c8f54a" },
+};
+
+function StatPill({ label, val, color }) {
+  return (
+    <div style={{ flex:1, textAlign:"center", background:"rgba(255,255,255,0.03)", borderRadius:"8px", padding:"8px 4px" }}>
+      <div style={{ fontSize:"9px", color:"#444", letterSpacing:"1px", marginBottom:"3px", textTransform:"uppercase" }}>{label}</div>
+      <div style={{ fontFamily:"'Bebas Neue',cursive", fontSize:"18px", color: color || "#aaa", letterSpacing:"1px" }}>{val ?? "—"}</div>
+    </div>
+  );
+}
+
+function LiveGamesStrip({ sportId, sportLabel, onGameSelect }) {
+  const [games, setGames] = useState([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    fetchOdds(sportId, "spreads,totals,h2h")
+      .then(data => setGames((data || []).slice(0, 15).map(g => parseGame(g, sportLabel))))
+      .catch(() => setGames([]))
+      .finally(() => setLoading(false));
+  }, [sportId]);
+  if (loading) return <div style={{ padding:"16px 0", color:"#444", fontSize:"12px", textAlign:"center" }}>Loading {sportLabel} games...</div>;
+  if (!games.length) return <div style={{ padding:"12px", background:"rgba(255,255,255,0.02)", borderRadius:"10px", marginBottom:"20px", fontSize:"12px", color:"#444", textAlign:"center" }}>No upcoming {sportLabel} games right now.</div>;
+  return (
+    <div style={{ marginBottom:"24px" }}>
+      <div style={{ fontSize:"10px", color:"#555", letterSpacing:"2px", textTransform:"uppercase", marginBottom:"10px" }}>📅 {sportLabel} — Tap any game</div>
+      {games.map((g, i) => (
+        <div key={g.id || i} onClick={() => onGameSelect?.(g)} style={{ background:"rgba(255,255,255,0.02)", border:"1px solid rgba(255,255,255,0.07)", borderRadius:"10px", padding:"12px 14px", marginBottom:"8px", cursor:"pointer" }}>
+          <div style={{ fontSize:"10px", color:"#444", marginBottom:"6px" }}>🕐 {g.time}</div>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+            <div style={{ flex:1 }}>
+              <div style={{ fontSize:"12px", color:"#666", marginBottom:"3px" }}>{g.away}</div>
+              <div style={{ fontSize:"14px", color:"#ccc", fontWeight:"600" }}>{g.home}</div>
+            </div>
+            <div style={{ display:"flex", gap:"10px", alignItems:"center" }}>
+              {g.vegasSpread != null && <StatPill label="SPREAD" val={`${g.vegasSpread > 0 ? "+" : ""}${g.vegasSpread}`} color="#c8f54a" />}
+              {g.vegasTotal  != null && <StatPill label="O/U" val={g.vegasTotal} />}
+              <span style={{ color:"#444", fontSize:"18px" }}>›</span>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function getPlayers(teamName, sport) {
+  if (!teamName || !PLAYERS) return [];
+  if (PLAYERS[teamName]) return PLAYERS[teamName];
+  const short = teamName.split(" ").pop();
+  if (PLAYERS[short]) return PLAYERS[short];
+  const match = Object.entries(PLAYERS).find(([k]) =>
+    k.toLowerCase().includes(short.toLowerCase()) ||
+    short.toLowerCase().includes(k.toLowerCase()) ||
+    teamName.toLowerCase().includes(k.toLowerCase())
+  );
+  return match ? match[1] : [];
+}
+
+function formatPlayerLines(player, sport) {
+  const lines = [];
+  const s = player;
+  if (sport === "nba" || sport === "wnba" || sport === "ncaab") {
+    if (s.pts != null && parseFloat(s.pts) > 0) lines.push({ stat:"PTS", proj: s.pts });
+    if (s.reb != null && parseFloat(s.reb) > 0) lines.push({ stat:"REB", proj: s.reb });
+    if (s.ast != null && parseFloat(s.ast) > 0) lines.push({ stat:"AST", proj: s.ast });
+  } else if (sport === "nfl" || sport === "ncaaf") {
+    if (s.pyds   != null && parseFloat(s.pyds)   > 0) lines.push({ stat:"PASS YDS", proj: s.pyds });
+    if (s.ptds   != null && parseFloat(s.ptds)   > 0) lines.push({ stat:"PASS TDS", proj: s.ptds });
+    if (s.ryds   != null && parseFloat(s.ryds)   > 0) lines.push({ stat:"RUSH YDS", proj: s.ryds });
+    if (s.ryds_r != null && parseFloat(s.ryds_r) > 0) lines.push({ stat:"REC YDS",  proj: s.ryds_r });
+    if (s.rec    != null && parseFloat(s.rec)    > 0) lines.push({ stat:"REC",       proj: s.rec });
+  } else if (sport === "mlb") {
+    // Pitchers
+    if (s.era  != null && parseFloat(s.era)  > 0) lines.push({ stat:"ERA",         proj: s.era  });
     if (s.so   != null && parseFloat(s.so)   > 0) lines.push({ stat:"K's",         proj: s.so   });
     if (s.outs != null && parseFloat(s.outs) > 0) lines.push({ stat:"OUTS",        proj: s.outs });
     // Batters
