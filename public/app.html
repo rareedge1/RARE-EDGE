@@ -35,20 +35,16 @@ body{background:#080810;color:#fff;font-family:'DM Sans',sans-serif;-webkit-font
 <script src="/re-models.js"></script>
 <script src="/re-api.js"></script>
 <!-- All JSX compiled together inline -->
-<script type="text/babel" data-presets="react">
-const {useState,useEffect,useCallback,useRef,useMemo}=React;
-</script>
 <script>
-// Fetch all JSX files and compile together as one inline babel script
 const JSX=['/re-ui.js','/re-sport-nfl.js','/re-sport-nba.js','/re-sport-mlb.js','/re-sport-nhl.js','/re-sport-soccer.js','/re-sport-other.js','/re-dashboard.js','/re-calibration.js','/re-app.js'];
+const HOOKS='const {useState,useEffect,useCallback,useRef,useMemo}=React;';
 Promise.all(JSX.map(f=>fetch(f).then(r=>r.text())))
   .then(codes=>{
+    const src=HOOKS+'\n'+codes.join('\n');
+    const compiled=Babel.transform(src,{presets:[['react',{runtime:'classic'}]]}).code;
     const s=document.createElement('script');
-    s.type='text/babel';
-    s.setAttribute('data-presets','react');
-    s.textContent=codes.join('\n');
+    s.textContent=compiled;
     document.body.appendChild(s);
-    Babel.transformScriptTags();
   })
   .catch(e=>{
     document.getElementById('root').innerHTML='<div style="color:#ff6b6b;padding:40px;text-align:center;font-family:sans-serif"><div style="font-size:18px;margin-bottom:10px">⚠ Error Loading App</div><div style="font-size:12px;color:#888">'+e.message+'</div></div>';
