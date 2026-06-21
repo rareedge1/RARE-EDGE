@@ -106,7 +106,7 @@ const PROP_STAT_MAP = {
   "player_pass_yds":     "PASS YDS",
   "player_rush_yds":     "RUSH YDS",
   "player_reception_yds":"REC YDS",
-  "player_strikeouts":   "K's",
+  "player_strikeouts":   "Ks",
   "player_home_runs":    "HR",
   "player_goals":        "GOALS",
   "player_shots_on_goal":"SOG",
@@ -181,11 +181,12 @@ function GameDetailModal({ game, sport, isPremium, onClose }) {
     var sportKeyMap = { nfl:"americanfootball_nfl", nba:"basketball_nba", wnba:"basketball_wnba", mlb:"baseball_mlb", nhl:"hockey_nhl", ncaaf:"americanfootball_ncaaf" };
     var sportKey = sportKeyMap[sport] || sport;
     var mktMap = {
-      "americanfootball_nfl": "player_pass_tds,player_rush_yds,player_reception_yds",
-      "basketball_nba":       "player_points,player_rebounds,player_assists",
-      "basketball_wnba":      "player_points,player_rebounds,player_assists",
-      "hockey_nhl":           "player_goals,player_shots_on_goal",
-      "baseball_mlb":         "player_strikeouts,player_home_runs",
+      "americanfootball_nfl":  "player_pass_tds,player_rush_yds,player_reception_yds,player_anytime_td",
+      "basketball_nba":        "player_points,player_rebounds,player_assists,player_threes",
+      "basketball_wnba":       "player_points,player_rebounds,player_assists",
+      "hockey_nhl":            "player_goals,player_assists,player_shots_on_goal",
+      "baseball_mlb":          "player_strikeouts,player_hits,player_home_runs",
+      "americanfootball_ncaaf":"player_pass_tds,player_rush_yds,player_reception_yds",
     };
     var mkt = mktMap[sportKey] || "player_points";
     fetch("/api/odds?sport=" + sportKey + "&gameId=" + encodeURIComponent(game.id) + "&type=props&markets=" + encodeURIComponent(mkt))
@@ -223,24 +224,26 @@ function GameDetailModal({ game, sport, isPremium, onClose }) {
   }, [game.id, isPremium]);
 
   const proj = (function() {
-    if (sport === "nfl" || sport === "ncaaf" || sport === "ufl") {
-      var h = findTeam(game.home, NFL) || findTeam(game.home, UFL);
-      var a = findTeam(game.away, NFL) || findTeam(game.away, UFL);
-      return projectFootball(h, a, game.vegasSpread, game.vegasTotal);
-    }
-    if (sport === "nba" || sport === "ncaab") {
-      return projectBasketball(findTeam(game.home, NBA), findTeam(game.away, NBA), game.vegasSpread, game.vegasTotal);
-    }
-    if (sport === "wnba") {
-      return projectBasketball(findTeam(game.home, WNBA), findTeam(game.away, WNBA), game.vegasSpread, game.vegasTotal, { homeAdv:2.5 });
-    }
-    if (sport === "mlb") {
-      var hm = findTeam(game.home, MLB); var aw = findTeam(game.away, MLB);
-      return projectBaseball(hm, aw, game.vegasTotal, { parkFactor: hm?.park || 1.0 });
-    }
-    if (sport === "nhl") {
-      return projectHockey(findTeam(game.home, NHL), findTeam(game.away, NHL), game.vegasTotal);
-    }
+    try {
+      if (sport === "nfl" || sport === "ncaaf" || sport === "ufl") {
+        var h = findTeam(game.home, NFL) || findTeam(game.home, UFL);
+        var a = findTeam(game.away, NFL) || findTeam(game.away, UFL);
+        return projectFootball(h, a, game.vegasSpread, game.vegasTotal);
+      }
+      if (sport === "nba" || sport === "ncaab") {
+        return projectBasketball(findTeam(game.home, NBA), findTeam(game.away, NBA), game.vegasSpread, game.vegasTotal);
+      }
+      if (sport === "wnba") {
+        return projectBasketball(findTeam(game.home, WNBA), findTeam(game.away, WNBA), game.vegasSpread, game.vegasTotal, { homeAdv:2.5 });
+      }
+      if (sport === "mlb") {
+        var hm = findTeam(game.home, MLB); var aw = findTeam(game.away, MLB);
+        return projectBaseball(hm, aw, game.vegasTotal, { parkFactor: hm?.park || 1.0 });
+      }
+      if (sport === "nhl") {
+        return projectHockey(findTeam(game.home, NHL), findTeam(game.away, NHL), game.vegasTotal);
+      }
+    } catch(e) { return null; }
     return null;
   })();
 
@@ -284,7 +287,7 @@ function GameDetailModal({ game, sport, isPremium, onClose }) {
             <div>
               {proj && isPremium && (
                 <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"10px", marginBottom:"16px" }}>
-                  <StatPill label="Proj Spread" val={(proj.projSpread > 0 ? "+" : "") + proj.projSpread} color={Math.abs(proj.vSpread || 0) >= EDGE_MIN ? "#c8f54a" : "#aaa"} />
+                  {proj.projSpread != null && <StatPill label="Proj Spread" val={(proj.projSpread > 0 ? "+" : "") + proj.projSpread} color={Math.abs(proj.vSpread || 0) >= EDGE_MIN ? "#c8f54a" : "#aaa"} />}
                   <StatPill label="Proj Total"  val={proj.projTotal} color={Math.abs(proj.vTotal || 0) >= EDGE_MIN * 1.5 ? "#c8f54a" : "#aaa"} />
                   <StatPill label={(game.away || "").split(" ").pop() + " Win%"} val={proj.awayWin + "%"} />
                   <StatPill label={(game.home || "").split(" ").pop() + " Win%"} val={proj.homeWin + "%"} />

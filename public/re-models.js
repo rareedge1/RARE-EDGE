@@ -34,7 +34,10 @@ const SPORT_MODEL_WEIGHT = {
 };
 
 function blendWinProb(modelWin, vegasHomeML, vegasAwayML, sport) {
-  if (!vegasHomeML || !vegasAwayML) return Math.min(88, Math.max(12, Math.round(modelWin)));
+  if (!vegasHomeML || !vegasAwayML) {
+    const r = Math.round(modelWin);
+    return (r >= 48 && r <= 52) ? 50 : Math.min(88, Math.max(12, r));
+  }
   const { homeTrue } = removeVig(vegasHomeML, vegasAwayML);
   const vegasWin = homeTrue * 100;
 
@@ -189,8 +192,9 @@ function projectBaseball(home, away, vegasTotal, opts = {}, liveData = null) {
   const homePitcherGrade = homePitcherEra <= 3.0 ? "ELITE" : homePitcherEra <= 3.75 ? "GOOD" : homePitcherEra <= 4.50 ? "AVG" : "WEAK";
   const awayPitcherGrade = awayPitcherEra <= 3.0 ? "ELITE" : awayPitcherEra <= 3.75 ? "GOOD" : awayPitcherEra <= 4.50 ? "AVG" : "WEAK";
 
+  const projSpread = +(hScore - aScore).toFixed(1);
   return {
-    projTotal, hScore, aScore, vTotal,
+    projSpread, projTotal, hScore, aScore, vSpread: null, vTotal,
     homeWin, awayWin: 100 - homeWin,
     vegasHomeWin, winProbEdge,
     hasEdge: homeWin !== 50 && (Math.abs(vTotal || 0) >= 2.0) && (
@@ -228,8 +232,9 @@ function projectHockey(home, away, vegasTotal, opts = {}) {
   const vegasHomeWin = homeML ? Math.round(removeVig(homeML, awayML).homeTrue * 100) : null;
   const winProbEdge  = vegasHomeWin ? +(homeWin - vegasHomeWin).toFixed(1) : null;
 
+  const projSpread = +(hScore - aScore).toFixed(2);
   return {
-    projTotal, hScore, aScore, vTotal,
+    projSpread, projTotal, hScore, aScore, vSpread: null, vTotal,
     homeWin, awayWin: 100 - homeWin,
     vegasHomeWin, winProbEdge,
     hasEdge: homeWin !== 50 && (Math.abs(vTotal || 0) >= 0.5 || Math.abs(winProbEdge || 0) >= 6),
