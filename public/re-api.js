@@ -73,12 +73,15 @@ function parseGame(g, sportLabel) {
     return aVal > bVal ? a : b;
   }) : null;
 
+  const gameDate = new Date(g.commence_time).toLocaleDateString("en-US", { timeZone: "America/Chicago" });
+
   return {
     id:          g.id,
     home:        g.home_team,
     away:        g.away_team,
     time,
     rawStart:    g.commence_time,
+    gameDate,
     sportLabel,
     vegasSpread: homeSpread?.point,
     vegasTotal:  totalOut?.point,

@@ -155,6 +155,7 @@ const WNBA = {
   "Mercury":    { ortg:104.8, drtg:106.4, pace:84.4 },
   "Storm":      { ortg:106.8, drtg:105.8, pace:84.6 },
   "Mystics":    { ortg:103.2, drtg:108.2, pace:83.2 },
+  "Tempo":      { ortg:101.8, drtg:109.6, pace:84.0 },
 };
 
 // UFL Teams

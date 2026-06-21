@@ -321,7 +321,6 @@ const PLAYERS = {
   "Penguins":      [{ n:"E. Malkin",    g:0.31,a:0.58,sog:3.0 },{ n:"B. Rust",      g:0.28,a:0.38,sog:2.8 }],
   "Hurricanes":    [{ n:"S. Necas",     g:0.38,a:0.48,sog:3.2 },{ n:"A. Svechnikov",g:0.38,a:0.44,sog:3.2 }],
   "Jets":          [{ n:"K. Connor",    g:0.44,a:0.54,sog:3.4 },{ n:"M. Scheifele", g:0.38,a:0.54,sog:3.2 }],
-};
 
 // ── UFC / MMA fighters ───────────────────────────────────────
 // Keyed by fighter last name — matches Odds API description field
