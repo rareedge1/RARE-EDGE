@@ -243,7 +243,7 @@ function DashboardCard({ game, isPremium, index, scoreData, mlbLive, movement, e
       <div style={{ padding:"12px 14px" }}>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:"8px" }}>
           <div style={{ fontSize:"9px", color:"#444" }}>{game.sportLabel} · {game.time}</div>
-          {isLive  && <div style={{ fontSize:"9px", color:"#c8f54a", fontWeight:"700", letterSpacing:"1px", background:"rgba(200,245,74,0.12)", padding:"2px 6px", borderRadius:"4px" }}>● LIVE</div>}
+          {isLive  && <div style={{ fontSize:"9px", color:"#c8f54a", fontWeight:"700", letterSpacing:"1px", background:"rgba(200,245,74,0.12)", padding:"2px 6px", borderRadius:"4px", display:"flex", alignItems:"center", gap:"4px" }}><span style={{ display:"inline-block", width:"6px", height:"6px", borderRadius:"50%", background:"#c8f54a", animation:"pulse 1.2s ease-in-out infinite" }} />LIVE</div>}
           {isFinal && <div style={{ fontSize:"9px", color:"#555", fontWeight:"700", letterSpacing:"1px" }}>FINAL</div>}
         </div>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
@@ -445,11 +445,11 @@ function DashboardTab({ isPremium }) {
       });
       setOddsGames(games);
       // Save line snapshots for movement tracking
-      if (oddsGames.length > 0) {
+      if (games.length > 0) {
         fetch("/api/line-movement", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ games: oddsGames })
+          body: JSON.stringify({ games })
         }).catch(() => {});
       }
       setLastUpdated(new Date().toLocaleTimeString());
