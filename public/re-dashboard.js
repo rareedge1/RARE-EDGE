@@ -268,14 +268,14 @@ function DashboardCard({ game, isPremium, index, scoreData, mlbLive, movement, e
           </div>
         )}
         {/* Line movement — premium only */}
-        {isPremium && movement && (movement.spreadMove || movement.totalMove || movement.mlMove) && (
+        {isPremium && movement && !!(movement.spreadMove || movement.totalMove || movement.mlMove) && (
           <div style={{ marginTop:"8px", display:"flex", gap:"6px", flexWrap:"wrap" }}>
             {movement.spreadMove != null && movement.spreadMove !== 0 && (
               <div style={{ fontSize:"9px", padding:"2px 7px", borderRadius:"4px", background: movement.isSharp ? "rgba(200,245,74,0.10)" : "rgba(255,255,255,0.04)", color: movement.isSharp ? "#c8f54a" : "#555" }}>
                 {movement.isSharp ? "⚡ " : ""}SPREAD {movement.firstSpread > 0 ? "+" : ""}{movement.firstSpread} → {movement.latestSpread > 0 ? "+" : ""}{movement.latestSpread}
               </div>
             )}
-            {movement.totalMove != null && movement.totalMove !== 0 && (
+            {movement.totalMove != null && movement.totalMove !== 0 && movement.firstTotal != null && (
               <div style={{ fontSize:"9px", padding:"2px 7px", borderRadius:"4px", background:"rgba(255,255,255,0.04)", color:"#555" }}>
                 O/U {movement.firstTotal} → {movement.latestTotal}
               </div>
@@ -290,7 +290,7 @@ function DashboardCard({ game, isPremium, index, scoreData, mlbLive, movement, e
       </div>
 
       {open && ReactDOM.createPortal(
-        <GameDetailModal game={game} sport={sportKey} isPremium={isPremium} onClose={() => setOpen(false)} />,
+        <GameDetailModal game={game} sport={sportKey} isPremium={isPremium} onClose={() => setOpen(false)} proj={proj} />,
         document.body
       )}
     </div>
@@ -313,8 +313,8 @@ const DASH_SPORTS = [
 function DashboardTab({ isPremium }) {
   const today = new Date();
   const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
-  // dates: yesterday + today + next 3 days
-  const dates = [-1, 0, 1, 2, 3].map(i => { const d = new Date(today); d.setDate(d.getDate() + i); return d; });
+  // dates: yesterday + today + next 4 days
+  const dates = [-1, 0, 1, 2, 3, 4].map(i => { const d = new Date(today); d.setDate(d.getDate() + i); return d; });
   const [selectedDate, setSelectedDate] = useState(today);
   const [allGames, setAllGames]         = useState([]);
   const [scores, setScores]             = useState({});
@@ -441,7 +441,7 @@ function DashboardTab({ isPremium }) {
       const games = results.flat().filter(g => {
         // Keep games that started within last 36 hours or are in the future
         const start = new Date(g.rawStart).getTime();
-        const gDateStr = new Date(g.rawStart).toLocaleDateString('en-US', { timeZone: 'America/Chicago' }); const todayChicago = new Date().toLocaleDateString('en-US', { timeZone: 'America/Chicago' }); const tomorrowD = new Date(); tomorrowD.setDate(tomorrowD.getDate()+1); const tomorrowChicago = tomorrowD.toLocaleDateString('en-US', { timeZone: 'America/Chicago' }); const dayAfterD = new Date(); dayAfterD.setDate(dayAfterD.getDate()+2); const dayAfterChicago = dayAfterD.toLocaleDateString('en-US', { timeZone: 'America/Chicago' }); const dayAfter2D = new Date(); dayAfter2D.setDate(dayAfter2D.getDate()+3); const dayAfter2Chicago = dayAfter2D.toLocaleDateString('en-US', { timeZone: 'America/Chicago' }); return [todayChicago, tomorrowChicago, dayAfterChicago, dayAfter2Chicago].includes(gDateStr);
+        const gDateStr = new Date(g.rawStart).toLocaleDateString('en-US', { timeZone: 'America/Chicago' }); const todayChicago = new Date().toLocaleDateString('en-US', { timeZone: 'America/Chicago' }); const tomorrowD = new Date(); tomorrowD.setDate(tomorrowD.getDate()+1); const tomorrowChicago = tomorrowD.toLocaleDateString('en-US', { timeZone: 'America/Chicago' }); const dayAfterD = new Date(); dayAfterD.setDate(dayAfterD.getDate()+2); const dayAfterChicago = dayAfterD.toLocaleDateString('en-US', { timeZone: 'America/Chicago' }); const dayAfter2D = new Date(); dayAfter2D.setDate(dayAfter2D.getDate()+3); const dayAfter2Chicago = dayAfter2D.toLocaleDateString('en-US', { timeZone: 'America/Chicago' }); const dayAfter3D = new Date(); dayAfter3D.setDate(dayAfter3D.getDate()+4); const dayAfter3Chicago = dayAfter3D.toLocaleDateString('en-US', { timeZone: 'America/Chicago' }); return [todayChicago, tomorrowChicago, dayAfterChicago, dayAfter2Chicago, dayAfter3Chicago].includes(gDateStr);
       });
       setOddsGames(games);
       // Save line snapshots for movement tracking

@@ -36,7 +36,7 @@ const SPORT_MODEL_WEIGHT = {
 function blendWinProb(modelWin, vegasHomeML, vegasAwayML, sport) {
   if (!vegasHomeML || !vegasAwayML) {
     const r = Math.round(modelWin);
-    return (r >= 48 && r <= 52) ? 50 : Math.min(88, Math.max(12, r));
+    return (r >= 46 && r <= 54) ? 50 : Math.min(88, Math.max(12, r));
   }
   const { homeTrue } = removeVig(vegasHomeML, vegasAwayML);
   const vegasWin = homeTrue * 100;
@@ -51,11 +51,11 @@ function blendWinProb(modelWin, vegasHomeML, vegasAwayML, sport) {
 
   const blended = (modelWin * modelWeight) + (vegasWin * (1 - modelWeight));
 
-  // Dead zone: if blended lands 48-52%, no conviction — return exactly 50
-  // so hasEdge logic can filter it out
-  if (blended >= 48 && blended <= 52) return 50;
-
-  return Math.min(88, Math.max(12, Math.round(blended)));
+  // Dead zone: check after rounding so a raw float like 46.7 (rounds to 47)
+  // doesn't slip under the boundary and still trigger an edge.
+  const rounded = Math.min(88, Math.max(12, Math.round(blended)));
+  if (rounded >= 46 && rounded <= 54) return 50;
+  return rounded;
 }
 
 // Sport-calibrated spread to win probability
@@ -115,20 +115,23 @@ function projectBasketball(home, away, vegasSpread, vegasTotal, opts = {}) {
   if (!home || !away) return null;
 
   const pace = (home.pace + away.pace) / 2;
-  const homeOff = (home.ortg / 100) * pace;
-  const homeDef = (away.ortg / 100) * pace * (home.drtg / 100);
-  const awayOff = (away.ortg / 100) * pace;
-  const awayDef = (home.ortg / 100) * pace * (away.drtg / 100);
 
-  let homeScore = homeOff - homeDef / 2 + homeAdv;
-  let awayScore = awayOff - awayDef / 2;
+  // Standard possession-based expected points: blend each team's offense with
+  // the opponent's defense, scaled by pace. Per-sport calibration keeps totals
+  // realistic so the model doesn't carry a systematic over/under bias.
+  const SCORE_CAL = { nba: 0.98, wnba: 0.90, default: 1.0 };
+  const cal = SCORE_CAL[sport] || SCORE_CAL.default;
+  let homeScore = ((home.ortg + away.drtg) / 2) / 100 * pace * cal + homeAdv;
+  let awayScore = ((away.ortg + home.drtg) / 2) / 100 * pace * cal;
   if (b2bHome) homeScore -= 2.5;
   if (b2bAway) awayScore -= 2.5;
 
-  homeScore = Math.max(80, Math.round(homeScore));
-  awayScore = Math.max(80, Math.round(awayScore));
+  homeScore = Math.max(40, Math.round(homeScore));
+  awayScore = Math.max(40, Math.round(awayScore));
 
-  const projSpread = +(homeScore - awayScore).toFixed(1);
+  // Negative spread = home favored, matching the football model, vegasSpread,
+  // and the sign spreadToWinProb()/vSpread expect.
+  const projSpread = +(awayScore - homeScore).toFixed(1);
   const projTotal  = +(homeScore + awayScore).toFixed(1);
 
   const vSpread = vegasSpread ? +(projSpread - parseFloat(vegasSpread)).toFixed(1) : null;

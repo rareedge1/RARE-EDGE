@@ -100,20 +100,49 @@ function formatPlayerLines(player, sport) {
 
 // Prop stat key -> our stat label mapping
 const PROP_STAT_MAP = {
-  "player_points":       "PTS",
-  "player_rebounds":     "REB",
-  "player_assists":      "AST",
-  "player_pass_yds":     "PASS YDS",
-  "player_rush_yds":     "RUSH YDS",
-  "player_reception_yds":"REC YDS",
-  "player_strikeouts":   "Ks",
-  "player_home_runs":    "HR",
-  "player_goals":        "GOALS",
-  "player_shots_on_goal":"SOG",
+  "player_points":              "PTS",
+  "player_rebounds":            "REB",
+  "player_assists":             "AST",
+  "player_steals":              "STL",
+  "player_blocks":              "BLK",
+  "player_threes":              "3PM",
+  "player_points_rebounds_assists": "PRA",
+  "player_pass_yds":            "PASS YDS",
+  "player_pass_tds":            "PASS TDS",
+  "player_pass_attempts":       "PASS ATT",
+  "player_pass_completions":    "COMPLETIONS",
+  "player_pass_interceptions":  "INT",
+  "player_rush_yds":            "RUSH YDS",
+  "player_rush_attempts":       "RUSH ATT",
+  "player_rush_tds":            "RUSH TDS",
+  "player_reception_yds":       "REC YDS",
+  "player_receptions":          "REC",
+  "player_reception_tds":       "REC TDS",
+  "player_strikeouts":          "Ks",
+  "player_home_runs":           "HR",
+  "player_hits":                "HITS",
+  "player_total_bases":         "TOTAL BASES",
+  "player_rbis":                "RBI",
+  "player_walks":               "WALKS",
+  "player_earned_runs":         "ER",
+  "player_outs":                "OUTS",
+  "pitcher_strikeouts":         "Ks",
+  "batter_home_runs":           "HR",
+  "batter_hits":                "HITS",
+  "batter_total_bases":         "TOTAL BASES",
+  "batter_rbis":                "RBI",
+  "batter_walks":               "WALKS",
+  "player_goals":               "GOALS",
+  "player_assists":             "ASST",
+  "player_shots_on_goal":       "SOG",
+  "player_saves":               "SAVES",
+  "player_points_scored":       "PTS",
+  "fighter_method_of_victory":  "METHOD",
+  "fighter_win":                "WIN",
 };
 
 // ── GAME DETAIL MODAL ────────────────────────────────────────
-function GameDetailModal({ game, sport, isPremium, onClose }) {
+function GameDetailModal({ game, sport, isPremium, onClose, proj: projFromCard }) {
   const [tab, setTab]           = useState("overview");
   const [players, setPlayers]   = useState([]);
   const [propLines, setPropLines] = useState({});
@@ -223,7 +252,10 @@ function GameDetailModal({ game, sport, isPremium, onClose }) {
       }).catch(function() {});
   }, [game.id, isPremium]);
 
-  const proj = (function() {
+  // Use the projection already computed by the card (with ELO + liveData) when
+  // available. Falling back to a local recompute (no ELO, no liveData) would
+  // produce different numbers than the card — that was the 62% vs 57% bug.
+  const proj = projFromCard || (function() {
     try {
       if (sport === "nfl" || sport === "ncaaf" || sport === "ufl") {
         var h = findTeam(game.home, NFL) || findTeam(game.home, UFL);
