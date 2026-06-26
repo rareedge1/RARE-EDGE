@@ -69,9 +69,12 @@ function formatPlayerLines(player, sport) {
   const lines = [];
   const s = player;
   if (sport === "nba" || sport === "wnba" || sport === "ncaab") {
-    if (s.pts != null && parseFloat(s.pts) > 0) lines.push({ stat:"PTS", proj: s.pts });
-    if (s.reb != null && parseFloat(s.reb) > 0) lines.push({ stat:"REB", proj: s.reb });
-    if (s.ast != null && parseFloat(s.ast) > 0) lines.push({ stat:"AST", proj: s.ast });
+    if (s.pts    != null && parseFloat(s.pts)    > 0) lines.push({ stat:"PTS",  proj: s.pts    });
+    if (s.reb    != null && parseFloat(s.reb)    > 0) lines.push({ stat:"REB",  proj: s.reb    });
+    if (s.ast    != null && parseFloat(s.ast)    > 0) lines.push({ stat:"AST",  proj: s.ast    });
+    if (s.stl    != null && parseFloat(s.stl)    > 0) lines.push({ stat:"STL",  proj: s.stl    });
+    if (s.blk    != null && parseFloat(s.blk)    > 0) lines.push({ stat:"BLK",  proj: s.blk    });
+    if (s.threes != null && parseFloat(s.threes) > 0) lines.push({ stat:"3PM",  proj: s.threes });
   } else if (sport === "nfl" || sport === "ncaaf") {
     if (s.pyds   != null && parseFloat(s.pyds)   > 0) lines.push({ stat:"PASS YDS", proj: s.pyds });
     if (s.ptds   != null && parseFloat(s.ptds)   > 0) lines.push({ stat:"PASS TDS", proj: s.ptds });
@@ -92,53 +95,46 @@ function formatPlayerLines(player, sport) {
     if (s.avg   != null && parseFloat(s.avg)   > 0) lines.push({ stat:"AVG",         proj: s.avg   });
   } else if (sport === "nhl") {
     if (s.g   != null && parseFloat(s.g)   > 0) lines.push({ stat:"GOALS", proj: s.g   });
-    if (s.a   != null && parseFloat(s.a)   > 0) lines.push({ stat:"ASST",  proj: s.a   });
+    if (s.a   != null && parseFloat(s.a)   > 0) lines.push({ stat:"AST",   proj: s.a   });
     if (s.sog != null && parseFloat(s.sog) > 0) lines.push({ stat:"SOG",   proj: s.sog });
+  } else if (sport === "mma") {
+    if (s.str    != null && parseFloat(s.str) > 0) lines.push({ stat:"STR/MIN", proj: s.str    });
+    if (s.td     != null && parseFloat(s.td)  > 0) lines.push({ stat:"TD/15M",  proj: s.td     });
+    if (s.method)                                   lines.push({ stat:"STYLE",   proj: s.method });
+  } else if (sport === "soccer") {
+    if (s.goals_pg != null && parseFloat(s.goals_pg) > 0) lines.push({ stat:"GOALS/G", proj: s.goals_pg });
+    if (s.ast_pg   != null && parseFloat(s.ast_pg)   > 0) lines.push({ stat:"AST/G",   proj: s.ast_pg   });
+    if (s.shots_pg != null && parseFloat(s.shots_pg) > 0) lines.push({ stat:"SHOTS/G", proj: s.shots_pg });
   }
   return lines;
 }
 
 // Prop stat key -> our stat label mapping
 const PROP_STAT_MAP = {
-  "player_points":              "PTS",
-  "player_rebounds":            "REB",
-  "player_assists":             "AST",
-  "player_steals":              "STL",
-  "player_blocks":              "BLK",
-  "player_threes":              "3PM",
-  "player_points_rebounds_assists": "PRA",
-  "player_pass_yds":            "PASS YDS",
-  "player_pass_tds":            "PASS TDS",
-  "player_pass_attempts":       "PASS ATT",
-  "player_pass_completions":    "COMPLETIONS",
-  "player_pass_interceptions":  "INT",
-  "player_rush_yds":            "RUSH YDS",
-  "player_rush_attempts":       "RUSH ATT",
-  "player_rush_tds":            "RUSH TDS",
-  "player_reception_yds":       "REC YDS",
-  "player_receptions":          "REC",
-  "player_reception_tds":       "REC TDS",
-  "player_strikeouts":          "Ks",
-  "player_home_runs":           "HR",
-  "player_hits":                "HITS",
-  "player_total_bases":         "TOTAL BASES",
-  "player_rbis":                "RBI",
-  "player_walks":               "WALKS",
-  "player_earned_runs":         "ER",
-  "player_outs":                "OUTS",
-  "pitcher_strikeouts":         "Ks",
-  "batter_home_runs":           "HR",
-  "batter_hits":                "HITS",
-  "batter_total_bases":         "TOTAL BASES",
-  "batter_rbis":                "RBI",
-  "batter_walks":               "WALKS",
-  "player_goals":               "GOALS",
-  "player_assists":             "ASST",
-  "player_shots_on_goal":       "SOG",
-  "player_saves":               "SAVES",
-  "player_points_scored":       "PTS",
-  "fighter_method_of_victory":  "METHOD",
-  "fighter_win":                "WIN",
+  // Basketball
+  "player_points":             "PTS",
+  "player_rebounds":           "REB",
+  "player_assists":            "AST",
+  "player_steals":             "STL",
+  "player_blocks":             "BLK",
+  "player_threes":             "3PM",
+  // Football
+  "player_pass_yds":           "PASS YDS",
+  "player_pass_tds":           "PASS TDS",
+  "player_rush_yds":           "RUSH YDS",
+  "player_reception_yds":      "REC YDS",
+  "player_anytime_td":         "ANYTIME TD",
+  // MLB
+  "player_strikeouts":         "Ks",
+  "player_home_runs":          "HR",
+  "player_hits":               "HITS",
+  "player_total_bases":        "TOTAL BASES",
+  "player_rbis":               "RBI",
+  "player_walks":              "WALKS",
+  "player_batting_avg":        "AVG",
+  // Hockey
+  "player_goals":              "GOALS",
+  "player_shots_on_goal":      "SOG",
 };
 
 // ── GAME DETAIL MODAL ────────────────────────────────────────
@@ -207,15 +203,16 @@ function GameDetailModal({ game, sport, isPremium, onClose, proj: projFromCard }
   // Load prop lines
   useEffect(() => {
     if (!isPremium || !game.id) return;
-    var sportKeyMap = { nfl:"americanfootball_nfl", nba:"basketball_nba", wnba:"basketball_wnba", mlb:"baseball_mlb", nhl:"hockey_nhl", ncaaf:"americanfootball_ncaaf" };
+    var sportKeyMap = { nfl:"americanfootball_nfl", nba:"basketball_nba", wnba:"basketball_wnba", mlb:"baseball_mlb", nhl:"hockey_nhl", ncaaf:"americanfootball_ncaaf", soccer:"soccer_epl" };
     var sportKey = sportKeyMap[sport] || sport;
     var mktMap = {
       "americanfootball_nfl":  "player_pass_tds,player_rush_yds,player_reception_yds,player_anytime_td",
-      "basketball_nba":        "player_points,player_rebounds,player_assists,player_threes",
-      "basketball_wnba":       "player_points,player_rebounds,player_assists",
+      "basketball_nba":        "player_points,player_rebounds,player_assists,player_threes,player_steals,player_blocks",
+      "basketball_wnba":       "player_points,player_rebounds,player_assists,player_steals,player_blocks",
       "hockey_nhl":            "player_goals,player_assists,player_shots_on_goal",
-      "baseball_mlb":          "player_strikeouts,player_hits,player_home_runs",
+      "baseball_mlb":          "player_strikeouts,player_hits,player_home_runs,player_rbis,player_walks,player_total_bases",
       "americanfootball_ncaaf":"player_pass_tds,player_rush_yds,player_reception_yds",
+      "soccer_epl":            "player_anytime_goal_scorer,player_shots_on_target",
     };
     var mkt = mktMap[sportKey] || "player_points";
     fetch("/api/odds?sport=" + sportKey + "&gameId=" + encodeURIComponent(game.id) + "&type=props&markets=" + encodeURIComponent(mkt))
@@ -333,49 +330,6 @@ function GameDetailModal({ game, sport, isPremium, onClose, proj: projFromCard }
                 </div>
               )}
 
-              {isPremium && movement && movement.snapCount >= 2 && (
-                <div style={{ background: movement.isSharp ? "rgba(200,245,74,0.04)" : "rgba(255,255,255,0.02)", border: movement.isSharp ? "1px solid rgba(200,245,74,0.15)" : "1px solid rgba(255,255,255,0.07)", borderRadius:"12px", padding:"14px", marginBottom:"16px" }}>
-                  <div style={{ fontSize:"10px", color: movement.isSharp ? "#c8f54a" : "#555", letterSpacing:"2px", marginBottom:"10px" }}>
-                    {movement.isSharp ? "⚡ SHARP MONEY DETECTED" : "📊 LINE MOVEMENT"}
-                  </div>
-                  <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:"8px", marginBottom:"10px" }}>
-                    <div style={{ textAlign:"center", background:"rgba(255,255,255,0.03)", borderRadius:"8px", padding:"8px" }}>
-                      <div style={{ fontSize:"9px", color:"#444", marginBottom:"3px" }}>SPREAD MOVE</div>
-                      <div style={{ fontSize:"16px", fontWeight:"700", color: movement.spreadMove === null ? "#333" : movement.spreadMove > 0 ? "#c8f54a" : movement.spreadMove < 0 ? "#ef4444" : "#555" }}>
-                        {movement.spreadMove === null ? "—" : (movement.spreadMove > 0 ? "+" : "") + movement.spreadMove}
-                      </div>
-                      <div style={{ fontSize:"9px", color:"#333", marginTop:"2px" }}>{movement.firstSpread != null ? movement.firstSpread : "—"} → {movement.latestSpread != null ? movement.latestSpread : "—"}</div>
-                    </div>
-                    <div style={{ textAlign:"center", background:"rgba(255,255,255,0.03)", borderRadius:"8px", padding:"8px" }}>
-                      <div style={{ fontSize:"9px", color:"#444", marginBottom:"3px" }}>TOTAL MOVE</div>
-                      <div style={{ fontSize:"16px", fontWeight:"700", color: movement.totalMove === null ? "#333" : movement.totalMove > 0 ? "#ef4444" : movement.totalMove < 0 ? "#60a5fa" : "#555" }}>
-                        {movement.totalMove === null ? "—" : (movement.totalMove > 0 ? "+" : "") + movement.totalMove}
-                      </div>
-                      <div style={{ fontSize:"9px", color:"#333", marginTop:"2px" }}>{movement.firstTotal != null ? movement.firstTotal : "—"} → {movement.latestTotal != null ? movement.latestTotal : "—"}</div>
-                    </div>
-                    <div style={{ textAlign:"center", background:"rgba(255,255,255,0.03)", borderRadius:"8px", padding:"8px" }}>
-                      <div style={{ fontSize:"9px", color:"#444", marginBottom:"3px" }}>ML MOVE</div>
-                      <div style={{ fontSize:"16px", fontWeight:"700", color: movement.mlMove === null ? "#333" : Math.abs(movement.mlMove) >= 15 ? "#c8f54a" : "#555" }}>
-                        {movement.mlMove === null ? "—" : (movement.mlMove > 0 ? "+" : "") + movement.mlMove}
-                      </div>
-                      <div style={{ fontSize:"9px", color:"#333", marginTop:"2px" }}>{movement.snapCount} snapshots</div>
-                    </div>
-                  </div>
-                  {movement.isSharp && (
-                    <div style={{ fontSize:"11px", color:"#aaa", lineHeight:"1.6", padding:"8px 10px", background:"rgba(200,245,74,0.04)", borderRadius:"8px" }}>
-                      {movement.spreadMove !== null && Math.abs(movement.spreadMove) >= 1.0 && (
-                        <div>📈 Spread moved {movement.spreadMove > 0 ? "toward " + game.away : "toward " + game.home} — sharp money on {movement.spreadMove > 0 ? game.away?.split(" ").pop() : game.home?.split(" ").pop()}</div>
-                      )}
-                      {movement.totalMove !== null && Math.abs(movement.totalMove) >= 0.5 && (
-                        <div>📉 Total moved {movement.totalMove > 0 ? "UP" : "DOWN"} — sharp money on the {movement.totalMove > 0 ? "OVER" : "UNDER"}</div>
-                      )}
-                    </div>
-                  )}
-                  {!movement.isSharp && (
-                    <div style={{ fontSize:"11px", color:"#444", lineHeight:"1.6" }}>Lines stable — no significant sharp action detected yet.</div>
-                  )}
-                </div>
-              )}
               {game.books && game.books.length > 0 && (
                 <div>
                   {game.bestLines && isPremium && (
@@ -416,25 +370,74 @@ function GameDetailModal({ game, sport, isPremium, onClose, proj: projFromCard }
                   <div style={{ fontSize:"14px", color:"#666", marginBottom:"16px" }}>Premium picks require an upgrade</div>
                   <button onClick={function() { startCheckout("monthly"); }} style={{ ...S.btn, width:"auto", padding:"10px 24px", fontSize:"16px" }}>⚡ UPGRADE →</button>
                 </div>
-              ) : proj && proj.hasEdge ? (
+              ) : (
                 <div>
-                  {Math.abs(proj.vSpread || 0) >= EDGE_MIN && (
-                    <div style={{ background:"rgba(200,245,74,0.06)", border:"1px solid rgba(200,245,74,0.2)", borderRadius:"12px", padding:"16px", marginBottom:"12px" }}>
-                      <div style={{ fontSize:"10px", color:"#c8f54a", letterSpacing:"2px", marginBottom:"6px" }}>⚡ SPREAD EDGE</div>
-                      <div style={{ fontSize:"16px", color:"#fff", fontWeight:"700" }}>Bet {proj.vSpread > 0 ? game.home : game.away} to cover</div>
-                      <div style={{ fontSize:"12px", color:"#666", marginTop:"4px" }}>Model edge: {proj.vSpread > 0 ? "+" : ""}{proj.vSpread} pts</div>
+                  {movement && movement.snapCount >= 2 && (
+                    <div style={{ background: movement.isSharp ? "rgba(200,245,74,0.04)" : "rgba(255,255,255,0.02)", border: movement.isSharp ? "1px solid rgba(200,245,74,0.15)" : "1px solid rgba(255,255,255,0.07)", borderRadius:"12px", padding:"14px", marginBottom:"16px" }}>
+                      <div style={{ fontSize:"10px", color: movement.isSharp ? "#c8f54a" : "#555", letterSpacing:"2px", marginBottom:"10px" }}>
+                        {movement.isSharp ? "⚡ SHARP MONEY DETECTED" : "📊 LINE MOVEMENT"}
+                      </div>
+                      <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:"8px", marginBottom:"10px" }}>
+                        <div style={{ textAlign:"center", background:"rgba(255,255,255,0.03)", borderRadius:"8px", padding:"8px" }}>
+                          <div style={{ fontSize:"9px", color:"#444", marginBottom:"3px" }}>SPREAD MOVE</div>
+                          <div style={{ fontSize:"16px", fontWeight:"700", color: movement.spreadMove === null ? "#333" : movement.spreadMove > 0 ? "#c8f54a" : movement.spreadMove < 0 ? "#ef4444" : "#555" }}>
+                            {movement.spreadMove === null ? "—" : (movement.spreadMove > 0 ? "+" : "") + movement.spreadMove}
+                          </div>
+                          <div style={{ fontSize:"9px", color:"#333", marginTop:"2px" }}>{movement.firstSpread != null ? movement.firstSpread : "—"} → {movement.latestSpread != null ? movement.latestSpread : "—"}</div>
+                        </div>
+                        <div style={{ textAlign:"center", background:"rgba(255,255,255,0.03)", borderRadius:"8px", padding:"8px" }}>
+                          <div style={{ fontSize:"9px", color:"#444", marginBottom:"3px" }}>TOTAL MOVE</div>
+                          <div style={{ fontSize:"16px", fontWeight:"700", color: movement.totalMove === null ? "#333" : movement.totalMove > 0 ? "#ef4444" : movement.totalMove < 0 ? "#60a5fa" : "#555" }}>
+                            {movement.totalMove === null ? "—" : (movement.totalMove > 0 ? "+" : "") + movement.totalMove}
+                          </div>
+                          <div style={{ fontSize:"9px", color:"#333", marginTop:"2px" }}>{movement.firstTotal != null ? movement.firstTotal : "—"} → {movement.latestTotal != null ? movement.latestTotal : "—"}</div>
+                        </div>
+                        <div style={{ textAlign:"center", background:"rgba(255,255,255,0.03)", borderRadius:"8px", padding:"8px" }}>
+                          <div style={{ fontSize:"9px", color:"#444", marginBottom:"3px" }}>ML MOVE</div>
+                          <div style={{ fontSize:"16px", fontWeight:"700", color: movement.mlMove === null ? "#333" : Math.abs(movement.mlMove) >= 15 ? "#c8f54a" : "#555" }}>
+                            {movement.mlMove === null ? "—" : (movement.mlMove > 0 ? "+" : "") + movement.mlMove}
+                          </div>
+                          <div style={{ fontSize:"9px", color:"#333", marginTop:"2px" }}>{movement.snapCount} snapshots</div>
+                        </div>
+                      </div>
+                      {movement.isSharp && (
+                        <div style={{ fontSize:"11px", color:"#aaa", lineHeight:"1.6", padding:"8px 10px", background:"rgba(200,245,74,0.04)", borderRadius:"8px" }}>
+                          {movement.spreadMove !== null && Math.abs(movement.spreadMove) >= 1.0 && (
+                            <div>📈 Spread moved {movement.spreadMove > 0 ? "toward " + game.away : "toward " + game.home} — sharp money on {movement.spreadMove > 0 ? game.away?.split(" ").pop() : game.home?.split(" ").pop()}</div>
+                          )}
+                          {movement.totalMove !== null && Math.abs(movement.totalMove) >= 0.5 && (
+                            <div>📉 Total moved {movement.totalMove > 0 ? "UP" : "DOWN"} — sharp money on the {movement.totalMove > 0 ? "OVER" : "UNDER"}</div>
+                          )}
+                        </div>
+                      )}
+                      {!movement.isSharp && (
+                        <div style={{ fontSize:"11px", color:"#444", lineHeight:"1.6" }}>Lines stable — no significant sharp action detected yet.</div>
+                      )}
                     </div>
                   )}
-                  {Math.abs(proj.vTotal || 0) >= EDGE_MIN * 1.5 && (
-                    <div style={{ background:"rgba(200,245,74,0.06)", border:"1px solid rgba(200,245,74,0.2)", borderRadius:"12px", padding:"16px", marginBottom:"12px" }}>
-                      <div style={{ fontSize:"10px", color:"#c8f54a", letterSpacing:"2px", marginBottom:"6px" }}>⚡ TOTAL EDGE</div>
-                      <div style={{ fontSize:"16px", color:"#fff", fontWeight:"700" }}>Bet the {proj.vTotal > 0 ? "OVER" : "UNDER"}</div>
-                      <div style={{ fontSize:"12px", color:"#666", marginTop:"4px" }}>Model projects {proj.projTotal} vs Vegas {game.vegasTotal}</div>
+                  {proj && proj.hasEdge ? (
+                    <div>
+                      {Math.abs(proj.vSpread || 0) >= EDGE_MIN && (
+                        <div style={{ background:"rgba(200,245,74,0.06)", border:"1px solid rgba(200,245,74,0.2)", borderRadius:"12px", padding:"16px", marginBottom:"12px" }}>
+                          <div style={{ fontSize:"10px", color:"#c8f54a", letterSpacing:"2px", marginBottom:"6px" }}>⚡ SPREAD EDGE</div>
+                          <div style={{ fontSize:"16px", color:"#fff", fontWeight:"700" }}>Bet {proj.vSpread > 0 ? game.home : game.away} to cover</div>
+                          <div style={{ fontSize:"12px", color:"#666", marginTop:"4px" }}>Model edge: {proj.vSpread > 0 ? "+" : ""}{proj.vSpread} pts</div>
+                        </div>
+                      )}
+                      {Math.abs(proj.vTotal || 0) >= EDGE_MIN * 1.5 && (
+                        <div style={{ background:"rgba(200,245,74,0.06)", border:"1px solid rgba(200,245,74,0.2)", borderRadius:"12px", padding:"16px", marginBottom:"12px" }}>
+                          <div style={{ fontSize:"10px", color:"#c8f54a", letterSpacing:"2px", marginBottom:"6px" }}>⚡ TOTAL EDGE</div>
+                          <div style={{ fontSize:"16px", color:"#fff", fontWeight:"700" }}>Bet the {proj.vTotal > 0 ? "OVER" : "UNDER"}</div>
+                          <div style={{ fontSize:"12px", color:"#666", marginTop:"4px" }}>Model projects {proj.projTotal} vs Vegas {game.vegasTotal}</div>
+                        </div>
+                      )}
                     </div>
+                  ) : (
+                    (!movement || movement.snapCount < 2) && (
+                      <div style={{ textAlign:"center", padding:"30px", color:"#444", fontSize:"13px" }}>No strong edge detected for this game.</div>
+                    )
                   )}
                 </div>
-              ) : (
-                <div style={{ textAlign:"center", padding:"30px", color:"#444", fontSize:"13px" }}>No strong edge detected for this game.</div>
               )}
             </div>
           )}
