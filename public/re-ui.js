@@ -23,7 +23,7 @@ function LiveGamesStrip({ sportId, sportLabel, onGameSelect }) {
   const [loading, setLoading] = useState(true);
   useEffect(() => {
     fetchOdds(sportId, "spreads,totals,h2h")
-      .then(data => setGames((data || []).slice(0, 15).map(g => parseGame(g, sportLabel))))
+      .then(data => setGames((data || []).map(g => parseGame(g, sportLabel))))
       .catch(() => setGames([]))
       .finally(() => setLoading(false));
   }, [sportId]);
@@ -424,7 +424,7 @@ function GameDetailModal({ game, sport, isPremium, onClose, proj: projFromCard }
                         <div style={{ background:"rgba(200,245,74,0.06)", border:"1px solid rgba(200,245,74,0.2)", borderRadius:"12px", padding:"16px", marginBottom:"12px" }}>
                           <div style={{ fontSize:"10px", color:"#c8f54a", letterSpacing:"2px", marginBottom:"6px" }}>⚡ SPREAD EDGE</div>
                           <div style={{ fontSize:"16px", color:"#fff", fontWeight:"700" }}>Model favors {proj.vSpread < 0 ? game.home : game.away} to cover</div>
-                          <div style={{ fontSize:"12px", color:"#666", marginTop:"4px" }}>Model edge: +{Math.abs(proj.vSpread)} pts</div>
+                          <div style={{ fontSize:"12px", color:"#666", marginTop:"4px" }}>Model edge: +{Math.min(Math.abs(proj.vSpread), 7.0)} pts</div>
                         </div>
                       )}
                       {Math.abs(proj.vTotal || 0) >= EDGE_MIN * 1.5 && (

@@ -357,10 +357,13 @@ function DashboardTab({ isPremium }) {
         const gStr = new Date(s.commence_time).toLocaleDateString("en-US", { timeZone: tz });
         return gStr === todayStr || gStr === yesterdayStr;
       })
-      .filter(s => !oddsGames.some(g =>
-        (g.home === s.home_team && g.away === s.away_team) ||
-        (g.home?.includes(s.home_team?.split(" ").pop()) && g.away?.includes(s.away_team?.split(" ").pop()))
-      ))
+      .filter(s => !oddsGames.some(g => {
+        const homeMatch = g.home === s.home_team || (g.home && s.home_team && g.home.includes(s.home_team.split(" ").pop()));
+        const awayMatch = g.away === s.away_team || (g.away && s.away_team && g.away.includes(s.away_team.split(" ").pop()));
+        if (!homeMatch || !awayMatch) return false;
+        const timeDiff = Math.abs(new Date(g.rawStart) - new Date(s.commence_time));
+        return timeDiff < 8 * 60 * 60 * 1000;
+      }))
       .map(s => ({
         id: s.id,
         home: s.home_team,
