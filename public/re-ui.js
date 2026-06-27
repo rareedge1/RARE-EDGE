@@ -125,7 +125,7 @@ const PROP_STAT_MAP = {
   "player_reception_yds":      "REC YDS",
   "player_anytime_td":         "ANYTIME TD",
   // MLB
-  "player_strikeouts":         "Ks",
+  "player_strikeouts":         "K's",
   "player_home_runs":          "HR",
   "player_hits":               "HITS",
   "player_total_bases":        "TOTAL BASES",
@@ -373,31 +373,31 @@ function GameDetailModal({ game, sport, isPremium, onClose, proj: projFromCard }
               ) : (
                 <div>
                   {movement && movement.snapCount >= 2 && (
-                    <div style={{ background: movement.isSharp ? "rgba(200,245,74,0.04)" : "rgba(255,255,255,0.02)", border: movement.isSharp ? "1px solid rgba(200,245,74,0.15)" : "1px solid rgba(255,255,255,0.07)", borderRadius:"12px", padding:"14px", marginBottom:"16px" }}>
-                      <div style={{ fontSize:"10px", color: movement.isSharp ? "#c8f54a" : "#555", letterSpacing:"2px", marginBottom:"10px" }}>
+                    <div style={{ background: movement.isSharp ? "rgba(200,245,74,0.04)" : "rgba(255,255,255,0.04)", border: movement.isSharp ? "1px solid rgba(200,245,74,0.15)" : "1px solid rgba(255,255,255,0.12)", borderRadius:"12px", padding:"14px", marginBottom:"16px" }}>
+                      <div style={{ fontSize:"10px", color: movement.isSharp ? "#c8f54a" : "#999", letterSpacing:"2px", marginBottom:"10px" }}>
                         {movement.isSharp ? "⚡ SHARP MONEY DETECTED" : "📊 LINE MOVEMENT"}
                       </div>
                       <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:"8px", marginBottom:"10px" }}>
-                        <div style={{ textAlign:"center", background:"rgba(255,255,255,0.03)", borderRadius:"8px", padding:"8px" }}>
-                          <div style={{ fontSize:"9px", color:"#444", marginBottom:"3px" }}>SPREAD MOVE</div>
-                          <div style={{ fontSize:"16px", fontWeight:"700", color: movement.spreadMove === null ? "#333" : movement.spreadMove > 0 ? "#c8f54a" : movement.spreadMove < 0 ? "#ef4444" : "#555" }}>
+                        <div style={{ textAlign:"center", background:"rgba(255,255,255,0.06)", borderRadius:"8px", padding:"8px" }}>
+                          <div style={{ fontSize:"9px", color:"#888", marginBottom:"3px" }}>SPREAD MOVE</div>
+                          <div style={{ fontSize:"16px", fontWeight:"700", color: movement.spreadMove === null ? "#666" : movement.spreadMove > 0 ? "#c8f54a" : movement.spreadMove < 0 ? "#ef4444" : "#aaa" }}>
                             {movement.spreadMove === null ? "—" : (movement.spreadMove > 0 ? "+" : "") + movement.spreadMove}
                           </div>
-                          <div style={{ fontSize:"9px", color:"#333", marginTop:"2px" }}>{movement.firstSpread != null ? movement.firstSpread : "—"} → {movement.latestSpread != null ? movement.latestSpread : "—"}</div>
+                          <div style={{ fontSize:"9px", color:"#666", marginTop:"2px" }}>{movement.firstSpread != null ? movement.firstSpread : "—"} → {movement.latestSpread != null ? movement.latestSpread : "—"}</div>
                         </div>
-                        <div style={{ textAlign:"center", background:"rgba(255,255,255,0.03)", borderRadius:"8px", padding:"8px" }}>
-                          <div style={{ fontSize:"9px", color:"#444", marginBottom:"3px" }}>TOTAL MOVE</div>
-                          <div style={{ fontSize:"16px", fontWeight:"700", color: movement.totalMove === null ? "#333" : movement.totalMove > 0 ? "#ef4444" : movement.totalMove < 0 ? "#60a5fa" : "#555" }}>
+                        <div style={{ textAlign:"center", background:"rgba(255,255,255,0.06)", borderRadius:"8px", padding:"8px" }}>
+                          <div style={{ fontSize:"9px", color:"#888", marginBottom:"3px" }}>TOTAL MOVE</div>
+                          <div style={{ fontSize:"16px", fontWeight:"700", color: movement.totalMove === null ? "#666" : movement.totalMove > 0 ? "#ef4444" : movement.totalMove < 0 ? "#60a5fa" : "#aaa" }}>
                             {movement.totalMove === null ? "—" : (movement.totalMove > 0 ? "+" : "") + movement.totalMove}
                           </div>
-                          <div style={{ fontSize:"9px", color:"#333", marginTop:"2px" }}>{movement.firstTotal != null ? movement.firstTotal : "—"} → {movement.latestTotal != null ? movement.latestTotal : "—"}</div>
+                          <div style={{ fontSize:"9px", color:"#666", marginTop:"2px" }}>{movement.firstTotal != null ? movement.firstTotal : "—"} → {movement.latestTotal != null ? movement.latestTotal : "—"}</div>
                         </div>
-                        <div style={{ textAlign:"center", background:"rgba(255,255,255,0.03)", borderRadius:"8px", padding:"8px" }}>
-                          <div style={{ fontSize:"9px", color:"#444", marginBottom:"3px" }}>ML MOVE</div>
-                          <div style={{ fontSize:"16px", fontWeight:"700", color: movement.mlMove === null ? "#333" : Math.abs(movement.mlMove) >= 15 ? "#c8f54a" : "#555" }}>
+                        <div style={{ textAlign:"center", background:"rgba(255,255,255,0.06)", borderRadius:"8px", padding:"8px" }}>
+                          <div style={{ fontSize:"9px", color:"#888", marginBottom:"3px" }}>ML MOVE</div>
+                          <div style={{ fontSize:"16px", fontWeight:"700", color: movement.mlMove === null ? "#666" : Math.abs(movement.mlMove) >= 15 ? "#c8f54a" : "#aaa" }}>
                             {movement.mlMove === null ? "—" : (movement.mlMove > 0 ? "+" : "") + movement.mlMove}
                           </div>
-                          <div style={{ fontSize:"9px", color:"#333", marginTop:"2px" }}>{movement.snapCount} snapshots</div>
+                          <div style={{ fontSize:"9px", color:"#666", marginTop:"2px" }}>{movement.snapCount} snapshots</div>
                         </div>
                       </div>
                       {movement.isSharp && (
@@ -408,10 +408,13 @@ function GameDetailModal({ game, sport, isPremium, onClose, proj: projFromCard }
                           {movement.totalMove !== null && Math.abs(movement.totalMove) >= 0.5 && (
                             <div>📉 Total moved {movement.totalMove > 0 ? "UP" : "DOWN"} — sharp money on the {movement.totalMove > 0 ? "OVER" : "UNDER"}</div>
                           )}
+                          {movement.mlMove !== null && Math.abs(movement.mlMove) >= 15 && (
+                            <div>💰 ML moved {movement.mlMove > 0 ? "+" : ""}{movement.mlMove} pts — sharp money on {movement.mlMove > 0 ? game.home?.split(" ").pop() : game.away?.split(" ").pop()}</div>
+                          )}
                         </div>
                       )}
                       {!movement.isSharp && (
-                        <div style={{ fontSize:"11px", color:"#444", lineHeight:"1.6" }}>Lines stable — no significant sharp action detected yet.</div>
+                        <div style={{ fontSize:"11px", color:"#777", lineHeight:"1.6" }}>Lines stable — no significant sharp action detected yet.</div>
                       )}
                     </div>
                   )}
@@ -420,14 +423,14 @@ function GameDetailModal({ game, sport, isPremium, onClose, proj: projFromCard }
                       {Math.abs(proj.vSpread || 0) >= EDGE_MIN && (
                         <div style={{ background:"rgba(200,245,74,0.06)", border:"1px solid rgba(200,245,74,0.2)", borderRadius:"12px", padding:"16px", marginBottom:"12px" }}>
                           <div style={{ fontSize:"10px", color:"#c8f54a", letterSpacing:"2px", marginBottom:"6px" }}>⚡ SPREAD EDGE</div>
-                          <div style={{ fontSize:"16px", color:"#fff", fontWeight:"700" }}>Bet {proj.vSpread > 0 ? game.home : game.away} to cover</div>
-                          <div style={{ fontSize:"12px", color:"#666", marginTop:"4px" }}>Model edge: {proj.vSpread > 0 ? "+" : ""}{proj.vSpread} pts</div>
+                          <div style={{ fontSize:"16px", color:"#fff", fontWeight:"700" }}>Model favors {proj.vSpread < 0 ? game.home : game.away} to cover</div>
+                          <div style={{ fontSize:"12px", color:"#666", marginTop:"4px" }}>Model edge: +{Math.abs(proj.vSpread)} pts</div>
                         </div>
                       )}
                       {Math.abs(proj.vTotal || 0) >= EDGE_MIN * 1.5 && (
                         <div style={{ background:"rgba(200,245,74,0.06)", border:"1px solid rgba(200,245,74,0.2)", borderRadius:"12px", padding:"16px", marginBottom:"12px" }}>
                           <div style={{ fontSize:"10px", color:"#c8f54a", letterSpacing:"2px", marginBottom:"6px" }}>⚡ TOTAL EDGE</div>
-                          <div style={{ fontSize:"16px", color:"#fff", fontWeight:"700" }}>Bet the {proj.vTotal > 0 ? "OVER" : "UNDER"}</div>
+                          <div style={{ fontSize:"16px", color:"#fff", fontWeight:"700" }}>Model favors the {proj.vTotal > 0 ? "OVER" : "UNDER"}</div>
                           <div style={{ fontSize:"12px", color:"#666", marginTop:"4px" }}>Model projects {proj.projTotal} vs Vegas {game.vegasTotal}</div>
                         </div>
                       )}
