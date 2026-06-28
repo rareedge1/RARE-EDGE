@@ -6,7 +6,7 @@ export default async function handler(req, res) {
   const { sport, markets = "spreads,totals,h2h", gameId, type } = req.query;
   if (!sport) return res.status(400).json({ error: "Sport required" });
 
-  const KEY = process.env.ODDS_API_KEY || "99a28e26d9ca8efe2551318548dabc7d";
+  const KEY = process.env.ODDS_API_KEY;
   const BASE = "https://api.the-odds-api.com/v4";
 
   // Stable midnight UTC boundary 5 days out — consistent within a day so the

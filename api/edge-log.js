@@ -4,8 +4,8 @@ export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
   if (req.method === "OPTIONS") return res.status(200).end();
 
-  const SUPABASE_URL = "https://avlcbelneozxxgikpoer.supabase.co";
-  const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF2bGNiZWxuZW96eHhnaWtwb2VyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0MjEyNjEsImV4cCI6MjA5NTk5NzI2MX0.Hd-2oX5BB88hDHF0MwEik8ym3CQzJQEV6aua6FhTOPk";
+  const SUPABASE_URL = process.env.SUPABASE_URL;
+  const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY;
   const headers = {
     "Content-Type": "application/json",
     "apikey": SUPABASE_KEY,
@@ -83,6 +83,19 @@ export default async function handler(req, res) {
       );
       return res.status(200).json({ updated: true });
     } catch(e) {
+      return res.status(500).json({ error: e.message });
+    }
+  }
+
+  // DELETE — wipe all edge_calls and line_snapshots (admin reset only)
+  if (req.method === "DELETE") {
+    const secret = new URL(req.url, "http://x").searchParams.get("secret");
+    if (secret !== process.env.RESET_SECRET) return res.status(401).json({ error: "Unauthorized" });
+    try {
+      await fetch(`${SUPABASE_URL}/rest/v1/edge_calls?id=not.is.null`, { method: "DELETE", headers });
+      await fetch(`${SUPABASE_URL}/rest/v1/line_snapshots?id=not.is.null`, { method: "DELETE", headers });
+      return res.status(200).json({ reset: true });
+    } catch (e) {
       return res.status(500).json({ error: e.message });
     }
   }

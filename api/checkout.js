@@ -7,10 +7,10 @@ export default async function handler(req, res) {
 
   try {
     const { plan } = req.body || {};
-    const SECRET = process.env.STRIPE_SECRET_KEY || "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";
+    const SECRET = process.env.STRIPE_SECRET_KEY;
     const PRICE  = plan === "annual"
-      ? (process.env.STRIPE_PRICE_ANNUAL || "price_1TdwslPfkcBlMM6nyrtzZEvN")
-      : (process.env.STRIPE_PRICE_ID    || "price_1TcmdNPfkcBlMM6nqB8opXZU");
+      ? process.env.STRIPE_PRICE_ANNUAL
+      : process.env.STRIPE_PRICE_ID;
 
     const domain = "https://arareedge.com";
 

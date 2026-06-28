@@ -6,7 +6,7 @@ export default async function handler(req, res) {
   const { sport } = req.query;
   if (!sport) return res.status(400).json({ error: "Sport required" });
 
-  const KEY = process.env.ODDS_API_KEY || "99a28e26d9ca8efe2551318548dabc7d";
+  const KEY = process.env.ODDS_API_KEY;
   const url = `https://api.the-odds-api.com/v4/sports/${sport}/scores?apiKey=${KEY}&daysFrom=2`;
 
   try {

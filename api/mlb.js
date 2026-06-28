@@ -4,6 +4,7 @@ export default async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(200).end();
 
   try {
+    const SEASON = new Date().getFullYear();
     const today = new Date().toISOString().split("T")[0];
 
     // Fetch today's schedule with probable pitchers
@@ -15,7 +16,7 @@ export default async function handler(req, res) {
 
     // Fetch team stats (season)
     const teamStatsRes = await fetch(
-      `https://statsapi.mlb.com/api/v1/teams/stats?season=2025&sportId=1&stats=season&group=hitting,pitching`
+      `https://statsapi.mlb.com/api/v1/teams/stats?season=${SEASON}&sportId=1&stats=season&group=hitting,pitching`
     );
     const teamStatsData = await teamStatsRes.json();
 
@@ -42,7 +43,7 @@ export default async function handler(req, res) {
     async function getLast10(teamId) {
       try {
         const r = await fetch(
-          `https://statsapi.mlb.com/api/v1/teams/${teamId}/stats?stats=lastXGames&lastXGames=10&season=2025&group=hitting&sportId=1`
+          `https://statsapi.mlb.com/api/v1/teams/${teamId}/stats?stats=lastXGames&lastXGames=10&season=${SEASON}&group=hitting&sportId=1`
         );
         const d = await r.json();
         const split = d.stats?.[0]?.splits?.[0]?.stat;
@@ -58,7 +59,7 @@ export default async function handler(req, res) {
       if (!pitcherId) return null;
       try {
         const r = await fetch(
-          `https://statsapi.mlb.com/api/v1/people/${pitcherId}/stats?stats=season&season=2025&group=pitching`
+          `https://statsapi.mlb.com/api/v1/people/${pitcherId}/stats?stats=season&season=${SEASON}&group=pitching`
         );
         const d = await r.json();
         const stat = d.stats?.[0]?.splits?.[0]?.stat;
