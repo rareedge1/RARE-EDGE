@@ -183,7 +183,7 @@ function projectBaseball(home, away, vegasTotal, opts = {}, liveData = null) {
 
   const hScore    = Math.max(1, +homeRunsProj.toFixed(1));
   const aScore    = Math.max(1, +awayRunsProj.toFixed(1));
-  const projTotal = +(hScore + aScore).toFixed(1);
+  const projTotal = Math.max(6.5, +(hScore + aScore).toFixed(1));
   const vTotal    = vegasTotal ? +(projTotal - parseFloat(vegasTotal)).toFixed(1) : null;
 
   const modelWin = 50 + ((hScore - aScore) * 8);

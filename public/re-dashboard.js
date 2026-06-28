@@ -326,6 +326,7 @@ function DashboardTab({ isPremium }) {
   const [eloRatings, setEloRatings]     = useState({});
   const [clvData, setClvData]           = useState(null);
   const [oddsGames, setOddsGames]       = useState([]);
+  const gamesRef = React.useRef([]);
 
   // Fetch scores every 5 minutes
   useEffect(() => {
@@ -401,9 +402,16 @@ function DashboardTab({ isPremium }) {
     tryFetch();
   }, []);
 
-  // Fetch line movement data every 30 mins
+  // Fetch line movement data every 30 mins, and save a new snapshot each cycle
   useEffect(() => {
     const fetchMovement = () => {
+      if (gamesRef.current.length > 0) {
+        fetch("/api/line-movement", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ games: gamesRef.current })
+        }).catch(() => {});
+      }
       fetch("/api/line-movement")
         .then(r => r.json())
         .then(data => { if (data && typeof data === "object") setLineMovement(data); })
@@ -447,7 +455,8 @@ function DashboardTab({ isPremium }) {
         const gDateStr = new Date(g.rawStart).toLocaleDateString('en-US', { timeZone: 'America/Chicago' }); const todayChicago = new Date().toLocaleDateString('en-US', { timeZone: 'America/Chicago' }); const tomorrowD = new Date(); tomorrowD.setDate(tomorrowD.getDate()+1); const tomorrowChicago = tomorrowD.toLocaleDateString('en-US', { timeZone: 'America/Chicago' }); const dayAfterD = new Date(); dayAfterD.setDate(dayAfterD.getDate()+2); const dayAfterChicago = dayAfterD.toLocaleDateString('en-US', { timeZone: 'America/Chicago' }); const dayAfter2D = new Date(); dayAfter2D.setDate(dayAfter2D.getDate()+3); const dayAfter2Chicago = dayAfter2D.toLocaleDateString('en-US', { timeZone: 'America/Chicago' }); const dayAfter3D = new Date(); dayAfter3D.setDate(dayAfter3D.getDate()+4); const dayAfter3Chicago = dayAfter3D.toLocaleDateString('en-US', { timeZone: 'America/Chicago' }); return [todayChicago, tomorrowChicago, dayAfterChicago, dayAfter2Chicago, dayAfter3Chicago].includes(gDateStr);
       });
       setOddsGames(games);
-      // Save line snapshots for movement tracking
+      gamesRef.current = games;
+      // Save initial line snapshot for movement tracking
       if (games.length > 0) {
         fetch("/api/line-movement", {
           method: "POST",
