@@ -178,8 +178,9 @@ function projectBaseball(home, away, vegasTotal, opts = {}, liveData = null) {
   const homeWhipAdj = 1 + (homePitcherWhip - 1.28) * 0.15;
   const awayWhipAdj = 1 + (awayPitcherWhip - 1.28) * 0.15;
 
-  const homeRunsProj = (homeRuns * homeOpsAdj * (1 - awayPitcherEra / 9) * parkFactor + homeAdv) * awayWhipAdj;
-  const awayRunsProj = (awayRuns * awayOpsAdj * (1 - homePitcherEra / 9) * parkFactor) * homeWhipAdj;
+  const LEAGUE_AVG_ERA = 4.20;
+  const homeRunsProj = (homeRuns * homeOpsAdj * (awayPitcherEra / LEAGUE_AVG_ERA) * parkFactor + homeAdv) * awayWhipAdj;
+  const awayRunsProj = (awayRuns * awayOpsAdj * (homePitcherEra / LEAGUE_AVG_ERA) * parkFactor) * homeWhipAdj;
 
   const hScore    = Math.max(1, +homeRunsProj.toFixed(1));
   const aScore    = Math.max(1, +awayRunsProj.toFixed(1));
